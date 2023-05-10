@@ -1,0 +1,6 @@
+* ngspice initialization for sky130
+* assert BSIM compatibility mode with "nf" vs. "W"
+set ngbehavior=hsa
+* "nomodcheck" speeds up loading time
+set ng_nomodcheck
+set num_threads=8

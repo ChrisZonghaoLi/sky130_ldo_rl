@@ -1,0 +1,130 @@
+* high precision simulation
+*.OPTIONS maxord=1
+.OPTIONS itl1=200
+.OPTIONS itl2=200
+.OPTIONS itl4=200
+
+* Loop stability
+* http://education.ingenazure.com/ac-stability-analysis-ngspice/
+alter IL1 dc=10u
+let runs=2
+let run=0
+
+alter @Vprobe1[acmag]=1
+alter @Iprobe1[acmag]=0
+
+dowhile run<runs
+set run=$&run
+set temp=27
+
+ac dec 10 1 10G
+
+alter @Vprobe1[acmag]=0
+alter @Iprobe1[acmag]=1
+
+let run=run+1
+end
+
+let ip11 = ac1.i(Vprobe1)
+let ip12 = ac1.i(Vprobe2)
+let ip21 = ac2.i(Vprobe1)
+let ip22 = ac2.i(Vprobe2)
+let vprb1 = ac1.v(probe)
+let vprb2 = ac2.v(probe)
+
+*** Middlebrook
+let mb = 1/(vprb1+ip22)-1
+*** Tian that is preferred
+let av = 1/(1/(2*(ip11*vprb2-vprb1*ip21)+vprb1+ip21)-1)
+
+plot vdb(mb) vp(mb)
+plot vdb(av) vp(av)
+
+wrdata ldo_folded_cascode_tb_loop_gain_minload mag(av) vp(av)
+
+* at max load
+reset all
+alter IL1 dc=10m
+let runs=2
+let run=0
+
+alter @Vprobe1[acmag]=1
+alter @Iprobe1[acmag]=0
+
+dowhile run<runs
+set run=$&run
+set temp=27
+
+ac dec 10 1 10G
+
+alter @Vprobe1[acmag]=0
+alter @Iprobe1[acmag]=1
+
+let run=run+1
+end
+
+let ip11 = ac3.i(Vprobe1)
+let ip12 = ac3.i(Vprobe2)
+let ip21 = ac4.i(Vprobe1)
+let ip22 = ac4.i(Vprobe2)
+let vprb1 = ac3.v(probe)
+let vprb2 = ac4.v(probe)
+
+*** Middlebrook
+let mb = 1/(vprb1+ip22)-1
+*** Tian that is preferred
+let av = 1/(1/(2*(ip11*vprb2-vprb1*ip21)+vprb1+ip21)-1)
+
+plot vdb(mb) vp(mb)
+plot vdb(av) vp(av)
+
+wrdata ldo_folded_cascode_tb_loop_gain_maxload mag(av) vp(av)
+
+* DC sweep
+dc Vdd 1 3 0.01
+plot v(Vdd) v(Vreg)
+wrdata ldo_folded_cascode_tb_dc v(Vreg)
+
+* Transient analysis with load regulation
+* do not miss the space between the square bracket and number
+tran 10n 100u
+plot @Rdummy[i]
+plot Vreg
+wrdata ldo_folded_cascode_tb_load_reg Vreg
+wrdata ldo_folded_cascode_tb_load_reg_current @Rdummy[i] 
+
+* Transient analysis with line regulation
+* at minimum load current 10uA
+*alter @IL[PULSE] [ 10u 10u 0 10n 10n 100u 100u 0 ]
+*alter @Vdd[PULSE] [ 2 3 0 1u 1u 25u 50u 0 ]
+*tran 10n 100u
+*plot Vdd
+*plot @Rdummy[i]
+*plot Vreg
+*wrdata ldo_folded_cascode_tb_line_reg_minload Vreg
+*wrdata ldo_folded_cascode_tb_line_reg_Vdd Vdd
+
+* at maximum load current 10mA
+*alter @IL[PULSE] [ 10m 10m 0 10n 10n 100u 100u 0 ]
+*tran 10n 100u
+*plot @Rdummy[i]
+*plot Vreg
+*wrdata ldo_folded_cascode_tb_line_reg_maxload Vreg
+
+* PSRR with max load
+alter Vdd ac=1
+alter Vprobe1 ac=0
+ac dec 10 1 10G
+plot vdb(Vreg)
+wrdata ldo_folded_cascode_tb_psrr_maxload mag(Vreg) vp(Vreg)
+
+* PSRR with min load
+alter IL dc=10u
+ac dec 10 1 10G
+plot vdb(Vreg)
+wrdata ldo_folded_cascode_tb_psrr_minload mag(Vreg) vp(Vreg)
+
+* OP
+op
+alter IL dc=10u
+.include /autofs/fs1.ece/fs1.eecg.tcc/lizongh2/sky130_ldo/python/ldo/simulations/ldo_folded_cascode_tb_dev_params.spice
