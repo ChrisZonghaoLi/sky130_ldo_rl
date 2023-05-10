@@ -380,7 +380,7 @@ class GraphLDOFoldedCascode:
         self.Vline_reg_delta_target =  self.Vreg * 0.02  # line reg voltage to be around at most 2% of Vreg when it is at both ILmin and ILmax
         
         """If you want to apply the reward engineering"""
-        self.rew_eng = False
+        self.rew_eng = True
         
         
         
