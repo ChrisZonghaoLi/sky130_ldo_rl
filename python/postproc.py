@@ -2,7 +2,7 @@
     post-process vanilla LDO
 '''
 
-from utils import OutputParser
+from utils import OutputParser, ActionNormalizer
 from ckt_graphs import GraphLDO
 from ldo import LDOEnv
 
@@ -80,15 +80,6 @@ rews_buf10 = memory10.rews_buf[:num_steps]
 rews_buf11 = memory11.rews_buf[:num_steps]
 rews_buf12 = memory12.rews_buf[:num_steps]
 
-""" Replay the best results """
-best_file = file_name1
-best_design = np.argmax(rews_buf1)
-best_action = memory1.acts_buf[best_design]
-best_reward = np.max(rews_buf1)
-LDOEnv().step(best_action) # run the simulations
-
-""" Result visualizations and save these as pictures """
-# plot average reward
 def average_window(rews_buf, window=50):
     avg_rewards=[]
     for k in range(len(rews_buf)):
@@ -99,6 +90,543 @@ def average_window(rews_buf, window=50):
         avg_rewards.append(avg_reward)
     
     return avg_rewards
+
+
+""" Plot how each spec improve w.r.t. simulation run """
+# Noted: only the new simulations contain the record of individual specificaiton through simulation run
+file1 = 'memory_GraphLDO_2023-06-29_noise=uniform_reward=-0.62_ActorCriticRGCN_rew_eng=True'
+file2 = 'memory_GraphLDO_2023-06-30_noise=uniform_reward=-0.44_ActorCriticRGCN_rew_eng=True'
+file3 = 'memory_GraphLDO_2023-07-02_noise=uniform_reward=-0.56_ActorCriticRGCN_rew_eng=True'
+with open(f'./saved_memories/{file1}.pkl', 'rb') as memory_file:
+    _memory1 = pickle.load(memory_file)
+with open(f'./saved_memories/{file2}.pkl', 'rb') as memory_file:
+    _memory2 = pickle.load(memory_file)
+with open(f'./saved_memories/{file3}.pkl', 'rb') as memory_file:
+    _memory3 = pickle.load(memory_file)
+    
+info1 = _memory1.info_buf[:num_steps]
+info2 = _memory2.info_buf[:num_steps]
+info3 = _memory3.info_buf[:num_steps]
+
+# PM
+PM_maxload_1 = np.array([info1[i]['Loop-gain PM (deg) at max load'] for i in range(num_steps)])
+PM_maxload_2 = np.array([info2[i]['Loop-gain PM (deg) at max load'] for i in range(num_steps)])
+PM_maxload_3 = np.array([info3[i]['Loop-gain PM (deg) at max load'] for i in range(num_steps)])
+PM_maxload_mean = np.mean([PM_maxload_1, PM_maxload_2, PM_maxload_3], axis=0)
+PM_maxload_min = np.min([PM_maxload_1, PM_maxload_2, PM_maxload_3], axis=0)
+PM_maxload_max = np.max([PM_maxload_1, PM_maxload_2, PM_maxload_3], axis=0)
+
+PM_minload_1 = np.array([info1[i]['Loop-gain PM (deg) at min load'] for i in range(num_steps)])
+PM_minload_2 = np.array([info2[i]['Loop-gain PM (deg) at min load'] for i in range(num_steps)])
+PM_minload_3 = np.array([info3[i]['Loop-gain PM (deg) at min load'] for i in range(num_steps)])
+PM_minload_mean = np.mean([PM_minload_1, PM_minload_2, PM_minload_3], axis=0)
+PM_minload_min = np.min([PM_minload_1, PM_minload_2, PM_minload_3], axis=0)
+PM_minload_max = np.max([PM_minload_1, PM_minload_2, PM_minload_3], axis=0)
+
+plt.figure('PM')
+plt.plot(np.array(average_window(PM_minload_mean)), 'b', label='PM at $\mathbf{I_{L}=10\,\mu A}$') # RGCN
+plt.fill_between(np.linspace(0, num_steps, num_steps), PM_minload_min, PM_minload_max, alpha=0.3, color='b') 
+plt.plot(np.array(average_window(PM_maxload_mean)), 'r', label='PM at $\mathbf{I_{L}=10\,mA}$') # RGCN
+plt.fill_between(np.linspace(0, num_steps, num_steps), PM_maxload_min, PM_maxload_max, alpha=0.3, color='r') 
+plt.xlabel('Number of Simulations', fontweight='bold', fontsize=14)
+plt.xticks(fontsize=14, weight='bold')
+plt.xticks(np.arange(0, num_steps+1, 5000))
+plt.ylabel('$\mathbf{PM}$ $(\mathbf{degree})$', fontweight='bold', fontsize=14)
+plt.yticks(fontsize=14, fontweight='bold')
+plt.grid(linewidth=2)
+plt.legend()
+ax = plt.gca()
+ax.spines['bottom'].set_linewidth(2)
+ax.spines['left'].set_linewidth(2)
+ax.spines['right'].set_linewidth(2)
+ax.spines['top'].set_linewidth(2)
+plt.savefig(f'./pics/PM_ldo.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(f'./pics/PM_ldo.png', format='png', bbox_inches='tight')
+
+# PSRR
+PSRR_leq_10kHz_maxload_1 = np.array([info1[i]['PSRR worst maxload (dB) < 10kHz'] for i in range(num_steps)])
+PSRR_leq_10kHz_maxload_2 = np.array([info2[i]['PSRR worst maxload (dB) < 10kHz'] for i in range(num_steps)])
+PSRR_leq_10kHz_maxload_3 = np.array([info3[i]['PSRR worst maxload (dB) < 10kHz'] for i in range(num_steps)])
+PSRR_leq_10kHz_maxload_mean = np.mean([PSRR_leq_10kHz_maxload_1, PSRR_leq_10kHz_maxload_2, PSRR_leq_10kHz_maxload_3], axis=0)
+PSRR_leq_10kHz_maxload_min = np.min([PSRR_leq_10kHz_maxload_1, PSRR_leq_10kHz_maxload_2, PSRR_leq_10kHz_maxload_3], axis=0)
+PSRR_leq_10kHz_maxload_max = np.max([PSRR_leq_10kHz_maxload_1, PSRR_leq_10kHz_maxload_2, PSRR_leq_10kHz_maxload_3], axis=0)
+
+PSRR_leq_10kHz_minload_1 = np.array([info1[i]['PSRR worst minload (dB) < 10kHz'] for i in range(num_steps)])
+PSRR_leq_10kHz_minload_2 = np.array([info2[i]['PSRR worst minload (dB) < 10kHz'] for i in range(num_steps)])
+PSRR_leq_10kHz_minload_3 = np.array([info3[i]['PSRR worst minload (dB) < 10kHz'] for i in range(num_steps)])
+PSRR_leq_10kHz_minload_mean = np.mean([PSRR_leq_10kHz_minload_1, PSRR_leq_10kHz_minload_2, PSRR_leq_10kHz_minload_3], axis=0)
+PSRR_leq_10kHz_minload_min = np.min([PSRR_leq_10kHz_minload_1, PSRR_leq_10kHz_minload_2, PSRR_leq_10kHz_minload_3], axis=0)
+PSRR_leq_10kHz_minload_max = np.max([PSRR_leq_10kHz_minload_1, PSRR_leq_10kHz_minload_2, PSRR_leq_10kHz_minload_3], axis=0)
+
+PSRR_leq_1MHz_maxload_1 = np.array([info1[i]['PSRR worst maxload (dB) < 1MHz'] for i in range(num_steps)])
+PSRR_leq_1MHz_maxload_2 = np.array([info2[i]['PSRR worst maxload (dB) < 1MHz'] for i in range(num_steps)])
+PSRR_leq_1MHz_maxload_3 = np.array([info3[i]['PSRR worst maxload (dB) < 1MHz'] for i in range(num_steps)])
+PSRR_leq_1MHz_maxload_mean = np.mean([PSRR_leq_1MHz_maxload_1, PSRR_leq_1MHz_maxload_2, PSRR_leq_1MHz_maxload_3], axis=0)
+PSRR_leq_1MHz_maxload_min = np.min([PSRR_leq_1MHz_maxload_1, PSRR_leq_1MHz_maxload_2, PSRR_leq_1MHz_maxload_3], axis=0)
+PSRR_leq_1MHz_maxload_max = np.max([PSRR_leq_1MHz_maxload_1, PSRR_leq_1MHz_maxload_2, PSRR_leq_1MHz_maxload_3], axis=0)
+
+PSRR_leq_1MHz_minload_1 = np.array([info1[i]['PSRR worst minload (dB) < 1MHz'] for i in range(num_steps)])
+PSRR_leq_1MHz_minload_2 = np.array([info2[i]['PSRR worst minload (dB) < 1MHz'] for i in range(num_steps)])
+PSRR_leq_1MHz_minload_3 = np.array([info3[i]['PSRR worst minload (dB) < 1MHz'] for i in range(num_steps)])
+PSRR_leq_1MHz_minload_mean = np.mean([PSRR_leq_1MHz_minload_1, PSRR_leq_1MHz_minload_2, PSRR_leq_1MHz_minload_3], axis=0)
+PSRR_leq_1MHz_minload_min = np.min([PSRR_leq_1MHz_minload_1, PSRR_leq_1MHz_minload_2, PSRR_leq_1MHz_minload_3], axis=0)
+PSRR_leq_1MHz_minload_max = np.max([PSRR_leq_1MHz_minload_1, PSRR_leq_1MHz_minload_2, PSRR_leq_1MHz_minload_3], axis=0)
+
+PSRR_geq_1MHz_maxload_1 = np.array([info1[i]['PSRR worst maxload (dB) > 1MHz'] for i in range(num_steps)])
+PSRR_geq_1MHz_maxload_2 = np.array([info2[i]['PSRR worst maxload (dB) > 1MHz'] for i in range(num_steps)])
+PSRR_geq_1MHz_maxload_3 = np.array([info3[i]['PSRR worst maxload (dB) > 1MHz'] for i in range(num_steps)])
+PSRR_geq_1MHz_maxload_mean = np.mean([PSRR_geq_1MHz_maxload_1, PSRR_geq_1MHz_maxload_2, PSRR_geq_1MHz_maxload_3], axis=0)
+PSRR_geq_1MHz_maxload_min = np.mean([PSRR_geq_1MHz_maxload_1, PSRR_geq_1MHz_maxload_2, PSRR_geq_1MHz_maxload_3], axis=0)
+PSRR_geq_1MHz_maxload_max = np.mean([PSRR_geq_1MHz_maxload_1, PSRR_geq_1MHz_maxload_2, PSRR_geq_1MHz_maxload_3], axis=0)
+
+PSRR_geq_1MHz_minload_1 = np.array([info1[i]['PSRR worst minload (dB) > 1MHz'] for i in range(num_steps)])
+PSRR_geq_1MHz_minload_2 = np.array([info2[i]['PSRR worst minload (dB) > 1MHz'] for i in range(num_steps)])
+PSRR_geq_1MHz_minload_3 = np.array([info3[i]['PSRR worst minload (dB) > 1MHz'] for i in range(num_steps)])
+PSRR_geq_1MHz_minload_mean = np.mean([PSRR_geq_1MHz_minload_1, PSRR_geq_1MHz_minload_2, PSRR_geq_1MHz_minload_3], axis=0)
+PSRR_geq_1MHz_minload_min = np.mean([PSRR_geq_1MHz_minload_1, PSRR_geq_1MHz_minload_2, PSRR_geq_1MHz_minload_3], axis=0)
+PSRR_geq_1MHz_minload_max = np.mean([PSRR_geq_1MHz_minload_1, PSRR_geq_1MHz_minload_2, PSRR_geq_1MHz_minload_3], axis=0)
+
+plt.figure('PSRR maxload')
+fig, axs = plt.subplots(3)
+axs[0].plot(average_window(PSRR_leq_10kHz_maxload_mean), 'b', label='RGCN') # RGCN
+axs[0].fill_between(np.linspace(0, num_steps, num_steps), PSRR_leq_10kHz_maxload_min, PSRR_leq_10kHz_maxload_max, alpha=0.3, color='b') 
+axs[0].xaxis.set_tick_params(labelsize='14')
+axs[0].yaxis.set_tick_params(labelsize='14')
+axs[0].set_ylabel('$\mathbf{PSRR_{<10kHz}}$\n$\mathbf{(dB)}$', fontweight='bold', fontsize=14)
+axs[0].set_yticks(np.array([-60, -40, -20, 0, 20]))
+axs[0].set_xticklabels([])
+axs[0].spines['bottom'].set_linewidth(2)
+axs[0].spines['left'].set_linewidth(2)
+axs[0].spines['right'].set_linewidth(2)
+axs[0].spines['top'].set_linewidth(2)
+axs[0].grid(linewidth=2)
+axs[1].plot(average_window(PSRR_leq_1MHz_maxload_mean), 'b', label='RGCN') # RGCN
+axs[1].fill_between(np.linspace(0, num_steps, num_steps), PSRR_leq_1MHz_maxload_min, PSRR_leq_1MHz_maxload_max, alpha=0.3, color='b') 
+axs[1].xaxis.set_tick_params(labelsize='14')
+axs[1].yaxis.set_tick_params(labelsize='14')
+axs[1].set_ylabel('$\mathbf{PSRR_{<1MHz}}$\n$\mathbf{(dB)}$', fontweight='bold', fontsize=14)
+axs[1].set_yticks(np.array([-40, -20, 0, 20, 40]))
+axs[1].set_xticklabels([])
+axs[1].spines['bottom'].set_linewidth(2)
+axs[1].spines['left'].set_linewidth(2)
+axs[1].spines['right'].set_linewidth(2)
+axs[1].spines['top'].set_linewidth(2)
+axs[1].grid(linewidth=2)
+axs[2].plot(average_window(PSRR_geq_1MHz_maxload_mean), 'b', label='RGCN') # RGCN
+axs[2].fill_between(np.linspace(0, num_steps, num_steps), PSRR_geq_1MHz_maxload_min, PSRR_geq_1MHz_maxload_max, alpha=0.3, color='b') 
+axs[2].xaxis.set_tick_params(labelsize='14')
+axs[2].set_yticks(np.array([-4, -2, 0, 2, 4]))
+axs[2].yaxis.set_tick_params(labelsize='14')
+axs[2].set_ylabel('$\mathbf{PSRR_{>1MHz}}$\n$\mathbf{(dB)}$', fontweight='bold', fontsize=14)
+axs[2].spines['bottom'].set_linewidth(2)
+axs[2].spines['left'].set_linewidth(2)
+axs[2].spines['right'].set_linewidth(2)
+axs[2].spines['top'].set_linewidth(2)
+axs[2].grid(linewidth=2)
+axs[2].set_xlabel('Number of Simulations', fontweight='bold', fontsize=14)
+plt.savefig(f'./pics/PSRR_maxload_ldo.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(f'./pics/PSRR_maxload_ldo.png', format='png', bbox_inches='tight')
+
+plt.figure('PSRR minload')
+fig, axs = plt.subplots(3)
+axs[0].plot(average_window(PSRR_leq_10kHz_minload_mean), 'b', label='RGCN') # RGCN
+axs[0].fill_between(np.linspace(0, num_steps, num_steps), PSRR_leq_10kHz_minload_min, PSRR_leq_10kHz_minload_max, alpha=0.3, color='b') 
+axs[0].xaxis.set_tick_params(labelsize='14')
+axs[0].yaxis.set_tick_params(labelsize='14')
+axs[0].set_ylabel('$\mathbf{PSRR_{<10kHz}}$\n$\mathbf{(dB)}$', fontweight='bold', fontsize=14)
+axs[0].set_yticks(np.array([-60, -40, -20, 0, 20]))
+axs[0].set_xticklabels([])
+axs[0].spines['bottom'].set_linewidth(2)
+axs[0].spines['left'].set_linewidth(2)
+axs[0].spines['right'].set_linewidth(2)
+axs[0].spines['top'].set_linewidth(2)
+axs[0].grid(linewidth=2)
+axs[1].plot(average_window(PSRR_leq_1MHz_minload_mean), 'b', label='RGCN') # RGCN
+axs[1].fill_between(np.linspace(0, num_steps, num_steps), PSRR_leq_1MHz_minload_min, PSRR_leq_1MHz_minload_max, alpha=0.3, color='b') 
+axs[1].xaxis.set_tick_params(labelsize='14')
+axs[1].yaxis.set_tick_params(labelsize='14')
+axs[1].set_ylabel('$\mathbf{PSRR_{<1MHz}}$\n$\mathbf{(dB)}$', fontweight='bold', fontsize=14)
+axs[1].set_yticks(np.array([-40, -20, 0, 20, 40]))
+axs[1].set_xticklabels([])
+axs[1].spines['bottom'].set_linewidth(2)
+axs[1].spines['left'].set_linewidth(2)
+axs[1].spines['right'].set_linewidth(2)
+axs[1].spines['top'].set_linewidth(2)
+axs[1].grid(linewidth=2)
+axs[2].plot(average_window(PSRR_geq_1MHz_minload_mean), 'b', label='RGCN') # RGCN
+axs[2].fill_between(np.linspace(0, num_steps, num_steps), PSRR_geq_1MHz_minload_min, PSRR_geq_1MHz_minload_max, alpha=0.3, color='b') 
+axs[2].xaxis.set_tick_params(labelsize='14')
+axs[2].set_yticks(np.array([-30, -20, -10, 0, 10]))
+axs[2].yaxis.set_tick_params(labelsize='14')
+axs[2].set_ylabel('$\mathbf{PSRR_{>1MHz}}$\n$\mathbf{(dB)}$', fontweight='bold', fontsize=14)
+axs[2].spines['bottom'].set_linewidth(2)
+axs[2].spines['left'].set_linewidth(2)
+axs[2].spines['right'].set_linewidth(2)
+axs[2].spines['top'].set_linewidth(2)
+axs[2].grid(linewidth=2)
+axs[2].set_xlabel('Number of Simulations', fontweight='bold', fontsize=14)
+plt.savefig(f'./pics/PSRR_minload_ldo.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(f'./pics/PSRR_minload_ldo.png', format='png', bbox_inches='tight')
+
+""" Show the best results in each trial """
+best_design1 = np.argmax(rews_buf1)
+best_design2 = np.argmax(rews_buf2)
+best_design3 = np.argmax(rews_buf3)
+best_action1 = memory1.acts_buf[best_design1]
+best_action2 = memory2.acts_buf[best_design2]
+best_action3 = memory3.acts_buf[best_design3]
+
+best_action1 = ActionNormalizer(action_space_low=GraphLDO().action_space_low, action_space_high = \
+                               GraphLDO().action_space_high).action(best_action1) # convert [-1.1] range back to normal range
+best_action2 = ActionNormalizer(action_space_low=GraphLDO().action_space_low, action_space_high = \
+                               GraphLDO().action_space_high).action(best_action2) # convert [-1.1] range back to normal range
+best_action3 = ActionNormalizer(action_space_low=GraphLDO().action_space_low, action_space_high = \
+                               GraphLDO().action_space_high).action(best_action3) # convert [-1.1] range back to normal range
+    
+""" Plot how some key transistor dimensions evolve w.r.t. simulation run """
+action1 = memory1.acts_buf[:num_steps]
+action2 = memory2.acts_buf[:num_steps]
+action3 = memory3.acts_buf[:num_steps]
+# M1 and M2
+W_M1_mean = np.mean([action1[:num_steps,0], action2[:num_steps,0], action3[:num_steps,0]], axis=0)
+W_M1_min = np.min([action1[:num_steps,0], action2[:num_steps,0], action3[:num_steps,0]], axis=0)
+W_M1_max = np.max([action1[:num_steps,0], action2[:num_steps,0], action3[:num_steps,0]], axis=0)
+W_M1_mean = ActionNormalizer(action_space_low=GraphLDO().action_space_low[0], action_space_high = \
+                               GraphLDO().action_space_high[0]).action(W_M1_mean) # convert [-1.1] range back to normal range
+W_M1_min = ActionNormalizer(action_space_low=GraphLDO().action_space_low[0], action_space_high = \
+                               GraphLDO().action_space_high[0]).action(W_M1_min) # convert [-1.1] range back to normal range
+W_M1_max = ActionNormalizer(action_space_low=GraphLDO().action_space_low[0], action_space_high = \
+                               GraphLDO().action_space_high[0]).action(W_M1_max) # convert [-1.1] range back to normal range
+
+L_M1_mean = np.mean([action1[:num_steps,1], action2[:num_steps,1], action3[:num_steps,1]], axis=0)
+L_M1_min = np.min([action1[:num_steps,1], action2[:num_steps,1], action3[:num_steps,1]], axis=0)
+L_M1_max = np.max([action1[:num_steps,1], action2[:num_steps,1], action3[:num_steps,1]], axis=0)
+L_M1_mean = ActionNormalizer(action_space_low=GraphLDO().action_space_low[1], action_space_high = \
+                               GraphLDO().action_space_high[1]).action(L_M1_mean) # convert [-1.1] range back to normal range
+L_M1_min = ActionNormalizer(action_space_low=GraphLDO().action_space_low[1], action_space_high = \
+                               GraphLDO().action_space_high[1]).action(L_M1_min) # convert [-1.1] range back to normal range
+L_M1_max = ActionNormalizer(action_space_low=GraphLDO().action_space_low[1], action_space_high = \
+                               GraphLDO().action_space_high[1]).action(L_M1_max) # convert [-1.1] range back to normal range
+
+# M3 and M4
+W_M3_mean = np.mean([action1[:num_steps,2], action2[:num_steps,2], action3[:num_steps,2]], axis=0)
+W_M3_min = np.min([action1[:num_steps,2], action2[:num_steps,2], action3[:num_steps,2]], axis=0)
+W_M3_max = np.max([action1[:num_steps,2], action2[:num_steps,2], action3[:num_steps,2]], axis=0)
+W_M3_mean = ActionNormalizer(action_space_low=GraphLDO().action_space_low[2], action_space_high = \
+                               GraphLDO().action_space_high[2]).action(W_M3_mean) # convert [-1.1] range back to normal range
+W_M3_min = ActionNormalizer(action_space_low=GraphLDO().action_space_low[2], action_space_high = \
+                               GraphLDO().action_space_high[2]).action(W_M3_min) # convert [-1.1] range back to normal range
+W_M3_max = ActionNormalizer(action_space_low=GraphLDO().action_space_low[2], action_space_high = \
+                               GraphLDO().action_space_high[2]).action(W_M3_max) # convert [-1.1] range back to normal range
+
+L_M3_mean = np.mean([action1[:num_steps,3], action2[:num_steps,3], action3[:num_steps,3]], axis=0)
+L_M3_min = np.min([action1[:num_steps,3], action2[:num_steps,3], action3[:num_steps,3]], axis=0)
+L_M3_max = np.max([action1[:num_steps,3], action2[:num_steps,3], action3[:num_steps,3]], axis=0)
+L_M3_mean = ActionNormalizer(action_space_low=GraphLDO().action_space_low[3], action_space_high = \
+                               GraphLDO().action_space_high[3]).action(L_M3_mean) # convert [-1.1] range back to normal range
+L_M3_min = ActionNormalizer(action_space_low=GraphLDO().action_space_low[3], action_space_high = \
+                               GraphLDO().action_space_high[3]).action(L_M3_min) # convert [-1.1] range back to normal range
+L_M3_max = ActionNormalizer(action_space_low=GraphLDO().action_space_low[3], action_space_high = \
+                               GraphLDO().action_space_high[3]).action(L_M3_max) # convert [-1.1] range back to normal range
+
+# M5
+W_M5_mean = np.mean([action1[:num_steps,4], action2[:num_steps,4], action3[:num_steps,4]], axis=0)
+W_M5_min = np.min([action1[:num_steps,4], action2[:num_steps,4], action3[:num_steps,4]], axis=0)
+W_M5_max = np.max([action1[:num_steps,4], action2[:num_steps,4], action3[:num_steps,4]], axis=0)
+W_M5_mean = ActionNormalizer(action_space_low=GraphLDO().action_space_low[4], action_space_high = \
+                               GraphLDO().action_space_high[4]).action(W_M5_mean) # convert [-1.1] range back to normal range
+W_M5_min = ActionNormalizer(action_space_low=GraphLDO().action_space_low[4], action_space_high = \
+                               GraphLDO().action_space_high[4]).action(W_M5_min) # convert [-1.1] range back to normal range
+W_M5_max = ActionNormalizer(action_space_low=GraphLDO().action_space_low[4], action_space_high = \
+                               GraphLDO().action_space_high[4]).action(W_M5_max) # convert [-1.1] range back to normal range
+
+L_M5_mean = np.mean([action1[:num_steps,5], action2[:num_steps,5], action3[:num_steps,5]], axis=0)
+L_M5_min = np.min([action1[:num_steps,5], action2[:num_steps,5], action3[:num_steps,5]], axis=0)
+L_M5_max = np.max([action1[:num_steps,5], action2[:num_steps,5], action3[:num_steps,5]], axis=0)
+L_M5_mean = ActionNormalizer(action_space_low=GraphLDO().action_space_low[5], action_space_high = \
+                               GraphLDO().action_space_high[5]).action(L_M5_mean) # convert [-1.1] range back to normal range
+L_M5_min = ActionNormalizer(action_space_low=GraphLDO().action_space_low[5], action_space_high = \
+                               GraphLDO().action_space_high[5]).action(L_M5_min) # convert [-1.1] range back to normal range
+L_M5_max = ActionNormalizer(action_space_low=GraphLDO().action_space_low[5], action_space_high = \
+                               GraphLDO().action_space_high[5]).action(L_M5_max) # convert [-1.1] range back to normal range
+
+# MP
+W_MP_mean = np.mean([action1[:num_steps,6], action2[:num_steps,6], action3[:num_steps,6]], axis=0)
+W_MP_min = np.min([action1[:num_steps,6], action2[:num_steps,6], action3[:num_steps,6]], axis=0)
+W_MP_max = np.max([action1[:num_steps,6], action2[:num_steps,6], action3[:num_steps,6]], axis=0)
+W_MP_mean = ActionNormalizer(action_space_low=GraphLDO().action_space_low[6], action_space_high = \
+                               GraphLDO().action_space_high[6]).action(W_MP_mean) # convert [-1.1] range back to normal range
+W_MP_min = ActionNormalizer(action_space_low=GraphLDO().action_space_low[6], action_space_high = \
+                               GraphLDO().action_space_high[6]).action(W_MP_min) # convert [-1.1] range back to normal range
+W_MP_max = ActionNormalizer(action_space_low=GraphLDO().action_space_low[6], action_space_high = \
+                               GraphLDO().action_space_high[6]).action(W_MP_max) # convert [-1.1] range back to normal range
+
+L_MP_mean = np.mean([action1[:num_steps,7], action2[:num_steps,7], action3[:num_steps,7]], axis=0)
+L_MP_min = np.min([action1[:num_steps,7], action2[:num_steps,7], action3[:num_steps,7]], axis=0)
+L_MP_max = np.max([action1[:num_steps,7], action2[:num_steps,7], action3[:num_steps,7]], axis=0)
+L_MP_mean = ActionNormalizer(action_space_low=GraphLDO().action_space_low[7], action_space_high = \
+                               GraphLDO().action_space_high[7]).action(L_MP_mean) # convert [-1.1] range back to normal range
+L_MP_min = ActionNormalizer(action_space_low=GraphLDO().action_space_low[7], action_space_high = \
+                               GraphLDO().action_space_high[7]).action(L_MP_min) # convert [-1.1] range back to normal range
+L_MP_max = ActionNormalizer(action_space_low=GraphLDO().action_space_low[7], action_space_high = \
+                               GraphLDO().action_space_high[7]).action(L_MP_max) # convert [-1.1] range back to normal range
+
+M_MP_mean = np.mean([action1[:num_steps,8], action2[:num_steps,8], action3[:num_steps,8]], axis=0)
+M_MP_min = np.min([action1[:num_steps,8], action2[:num_steps,8], action3[:num_steps,8]], axis=0)
+M_MP_max = np.max([action1[:num_steps,7], action2[:num_steps,8], action3[:num_steps,8]], axis=0)
+M_MP_mean = ActionNormalizer(action_space_low=GraphLDO().action_space_low[8], action_space_high = \
+                               GraphLDO().action_space_high[8]).action(M_MP_mean) # convert [-1.1] range back to normal range
+M_MP_min = ActionNormalizer(action_space_low=GraphLDO().action_space_low[8], action_space_high = \
+                               GraphLDO().action_space_high[8]).action(M_MP_min) # convert [-1.1] range back to normal range
+M_MP_max = ActionNormalizer(action_space_low=GraphLDO().action_space_low[8], action_space_high = \
+                               GraphLDO().action_space_high[8]).action(M_MP_max) # convert [-1.1] range back to normal range
+    
+# Vb
+Vb_mean = np.mean([action1[:num_steps,9], action2[:num_steps,9], action3[:num_steps,9]], axis=0)
+Vb_min = np.min([action1[:num_steps,9], action2[:num_steps,9], action3[:num_steps,9]], axis=0)
+Vb_max = np.max([action1[:num_steps,9], action2[:num_steps,9], action3[:num_steps,9]], axis=0)
+Vb_mean = ActionNormalizer(action_space_low=GraphLDO().action_space_low[9], action_space_high = \
+                               GraphLDO().action_space_high[9]).action(Vb_mean) # convert [-1.1] range back to normal range
+Vb_min = ActionNormalizer(action_space_low=GraphLDO().action_space_low[9], action_space_high = \
+                               GraphLDO().action_space_high[9]).action(Vb_min) # convert [-1.1] range back to normal range
+Vb_max = ActionNormalizer(action_space_low=GraphLDO().action_space_low[9], action_space_high = \
+                               GraphLDO().action_space_high[9]).action(Vb_max) # convert [-1.1] range back to normal range
+
+# Rfb
+Rfb_mean = np.mean([action1[:num_steps,10], action2[:num_steps,10], action3[:num_steps,10]], axis=0)
+Rfb_min = np.min([action1[:num_steps,10], action2[:num_steps,10], action3[:num_steps,10]], axis=0)
+Rfb_max = np.max([action1[:num_steps,10], action2[:num_steps,10], action3[:num_steps,10]], axis=0)
+Rfb_mean = GraphLDO().Rsheet * GraphLDO().L_Rfb / GraphLDO().W_Rfb / \
+                                ActionNormalizer(action_space_low=GraphLDO().action_space_low[10], action_space_high = \
+                               GraphLDO().action_space_high[10]).action(Rfb_mean) # convert [-1.1] range back to normal range
+Rfb_min = GraphLDO().Rsheet * GraphLDO().L_Rfb / GraphLDO().W_Rfb / \
+                                ActionNormalizer(action_space_low=GraphLDO().action_space_low[10], action_space_high = \
+                               GraphLDO().action_space_high[10]).action(Rfb_min) # convert [-1.1] range back to normal range
+Rfb_max = GraphLDO().Rsheet * GraphLDO().L_Rfb / GraphLDO().W_Rfb / \
+                                ActionNormalizer(action_space_low=GraphLDO().action_space_low[10], action_space_high = \
+                               GraphLDO().action_space_high[10]).action(Rfb_max) # convert [-1.1] range back to normal range
+
+# Cfb
+Cfb_mean = np.mean([action1[:num_steps,11], action2[:num_steps,11], action3[:num_steps,11]], axis=0)
+Cfb_min = np.min([action1[:num_steps,11], action2[:num_steps,11], action3[:num_steps,11]], axis=0)
+Cfb_max = np.max([action1[:num_steps,11], action2[:num_steps,11], action3[:num_steps,11]], axis=0)
+Cfb_mean = (GraphLDO().W_Cfb*GraphLDO().L_Cfb*2e-15+(GraphLDO().W_Cfb+GraphLDO().L_Cfb)*0.38e-15) * \
+                               ActionNormalizer(action_space_low=GraphLDO().action_space_low[11], action_space_high = \
+                               GraphLDO().action_space_high[11]).action(Cfb_mean) # convert [-1.1] range back to normal range
+Cfb_min = (GraphLDO().W_Cfb*GraphLDO().L_Cfb*2e-15+(GraphLDO().W_Cfb+GraphLDO().L_Cfb)*0.38e-15) * \
+                                ActionNormalizer(action_space_low=GraphLDO().action_space_low[11], action_space_high = \
+                               GraphLDO().action_space_high[11]).action(Cfb_min) # convert [-1.1] range back to normal range
+Cfb_max = (GraphLDO().W_Cfb*GraphLDO().L_Cfb*2e-15+(GraphLDO().W_Cfb+GraphLDO().L_Cfb)*0.38e-15) * \
+                                ActionNormalizer(action_space_low=GraphLDO().action_space_low[11], action_space_high = \
+                               GraphLDO().action_space_high[11]).action(Cfb_max) # convert [-1.1] range back to normal range
+    
+# CL
+CL_mean = np.mean([action1[:num_steps,-1], action2[:num_steps,-1], action3[:num_steps,-1]], axis=0)
+CL_min = np.min([action1[:num_steps,-1], action2[:num_steps,-1], action3[:num_steps,-1]], axis=0)
+CL_max = np.max([action1[:num_steps,-1], action2[:num_steps,-1], action3[:num_steps,-1]], axis=0)
+CL_mean = (GraphLDO().W_CL*GraphLDO().L_CL*2e-15+(GraphLDO().W_CL+GraphLDO().L_CL)*0.38e-15) * \
+                                ActionNormalizer(action_space_low=GraphLDO().action_space_low[-1], action_space_high = \
+                               GraphLDO().action_space_high[-1]).action(CL_mean) # convert [-1.1] range back to normal range
+CL_min = (GraphLDO().W_CL*GraphLDO().L_CL*2e-15+(GraphLDO().W_CL+GraphLDO().L_CL)*0.38e-15) * \
+                                ActionNormalizer(action_space_low=GraphLDO().action_space_low[-1], action_space_high = \
+                               GraphLDO().action_space_high[-1]).action(CL_min) # convert [-1.1] range back to normal range
+CL_max = (GraphLDO().W_CL*GraphLDO().L_CL*2e-15+(GraphLDO().W_CL+GraphLDO().L_CL)*0.38e-15) * \
+                                ActionNormalizer(action_space_low=GraphLDO().action_space_low[-1], action_space_high = \
+                               GraphLDO().action_space_high[-1]).action(CL_max) # convert [-1.1] range back to normal range
+    
+plt.figure('Transistor dimensions M1')
+fig, axs = plt.subplots(2)
+axs[0].plot(average_window(W_M1_mean), 'b', label='RGCN') # RGCN
+axs[0].fill_between(np.linspace(0, num_steps, num_steps), W_M1_min, W_M1_max, alpha=0.3, color='b') 
+axs[0].xaxis.set_tick_params(labelsize='14')
+axs[0].yaxis.set_tick_params(labelsize='14')
+axs[0].set_ylabel('$\mathbf{W_{M_{1}}}$ $(\mathbf{\mu m})$', fontweight='bold', fontsize=14)
+axs[0].set_yticks(np.array([0, 25, 50, 75, 100]))
+axs[0].spines['bottom'].set_linewidth(2)
+axs[0].spines['left'].set_linewidth(2)
+axs[0].spines['right'].set_linewidth(2)
+axs[0].spines['top'].set_linewidth(2)
+axs[0].grid(linewidth=2)
+axs[1].plot(average_window(L_M1_mean), 'b', label='RGCN') # RGCN
+axs[1].fill_between(np.linspace(0, num_steps, num_steps), L_M1_min, L_M1_max, alpha=0.3, color='b') 
+axs[1].xaxis.set_tick_params(labelsize='14')
+axs[1].yaxis.set_tick_params(labelsize='14')
+axs[1].set_ylabel('$\mathbf{L_{M_{1}}}$ $(\mathbf{\mu m})$', fontweight='bold', fontsize=14)
+axs[1].spines['bottom'].set_linewidth(2)
+axs[1].spines['left'].set_linewidth(2)
+axs[1].spines['right'].set_linewidth(2)
+axs[1].spines['top'].set_linewidth(2)
+axs[1].grid(linewidth=2)
+axs[1].set_xlabel('Number of Simulations', fontweight='bold', fontsize=14)
+plt.savefig(f'./pics/M1_ldo.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(f'./pics/M1_ldo.png', format='png', bbox_inches='tight')
+
+plt.figure('Transistor dimensions M3')
+fig, axs = plt.subplots(2)
+axs[0].plot(average_window(W_M3_mean), 'b', label='RGCN') # RGCN
+axs[0].fill_between(np.linspace(0, num_steps, num_steps), W_M3_min, W_M3_max, alpha=0.3, color='b') 
+axs[0].xaxis.set_tick_params(labelsize='14')
+axs[0].yaxis.set_tick_params(labelsize='14')
+axs[0].set_ylabel('$\mathbf{W_{M_{3}}}$ $(\mathbf{\mu m})$', fontweight='bold', fontsize=14)
+axs[0].set_yticks(np.array([0, 25, 50, 75, 100]))
+axs[0].spines['bottom'].set_linewidth(2)
+axs[0].spines['left'].set_linewidth(2)
+axs[0].spines['right'].set_linewidth(2)
+axs[0].spines['top'].set_linewidth(2)
+axs[0].grid(linewidth=2)
+axs[1].plot(average_window(L_M3_mean), 'b', label='RGCN') # RGCN
+axs[1].fill_between(np.linspace(0, num_steps, num_steps), L_M3_min, L_M3_max, alpha=0.3, color='b') 
+axs[1].xaxis.set_tick_params(labelsize='14')
+axs[1].yaxis.set_tick_params(labelsize='14')
+axs[1].set_ylabel('$\mathbf{L_{M_{3}}}$ $(\mathbf{\mu m})$', fontweight='bold', fontsize=14)
+axs[1].spines['bottom'].set_linewidth(2)
+axs[1].spines['left'].set_linewidth(2)
+axs[1].spines['right'].set_linewidth(2)
+axs[1].spines['top'].set_linewidth(2)
+axs[1].grid(linewidth=2)
+axs[1].set_xlabel('Number of Simulations', fontweight='bold', fontsize=14)
+plt.savefig(f'./pics/M3_ldo.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(f'./pics/M3_ldo.png', format='png', bbox_inches='tight')
+
+plt.figure('Transistor dimensions M5')
+fig, axs = plt.subplots(2)
+axs[0].plot(average_window(W_M5_mean), 'b', label='RGCN') # RGCN
+axs[0].fill_between(np.linspace(0, num_steps, num_steps), W_M5_min, W_M5_max, alpha=0.3, color='b') 
+axs[0].xaxis.set_tick_params(labelsize='14')
+axs[0].yaxis.set_tick_params(labelsize='14')
+axs[0].set_ylabel('$\mathbf{W_{M_{5}}}$ $(\mathbf{\mu m})$', fontweight='bold', fontsize=14)
+axs[0].set_yticks(np.array([0, 25, 50, 75, 100]))
+axs[0].spines['bottom'].set_linewidth(2)
+axs[0].spines['left'].set_linewidth(2)
+axs[0].spines['right'].set_linewidth(2)
+axs[0].spines['top'].set_linewidth(2)
+axs[0].grid(linewidth=2)
+axs[1].plot(average_window(L_M5_mean), 'b', label='RGCN') # RGCN
+axs[1].fill_between(np.linspace(0, num_steps, num_steps), L_M5_min, L_M5_max, alpha=0.3, color='b') 
+axs[1].xaxis.set_tick_params(labelsize='14')
+axs[1].yaxis.set_tick_params(labelsize='14')
+axs[1].set_ylabel('$\mathbf{L_{M_{5}}}$ $(\mathbf{\mu m})$', fontweight='bold', fontsize=14)
+axs[1].spines['bottom'].set_linewidth(2)
+axs[1].spines['left'].set_linewidth(2)
+axs[1].spines['right'].set_linewidth(2)
+axs[1].spines['top'].set_linewidth(2)
+axs[1].grid(linewidth=2)
+axs[1].set_xlabel('Number of Simulations', fontweight='bold', fontsize=14)
+plt.savefig(f'./pics/M5_ldo.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(f'./pics/M5_ldo.png', format='png', bbox_inches='tight')
+
+plt.figure('Vb')
+plt.plot(average_window(Vb_mean), 'b', label='RGCN') # RGCN
+plt.fill_between(np.linspace(0, num_steps, num_steps), Vb_min, Vb_max, alpha=0.3, color='b') 
+plt.xlabel('Number of Simulations', fontweight='bold', fontsize=14)
+plt.xticks(fontsize=14, weight='bold')
+plt.xticks(np.arange(0, num_steps+1, 2000))
+plt.ylabel('$\mathbf{V_{b}}$ (V)', fontweight='bold', fontsize=14)
+plt.yticks(fontsize=14, fontweight='bold')
+plt.grid(linewidth=2)
+ax = plt.gca()
+ax.spines['bottom'].set_linewidth(2)
+ax.spines['left'].set_linewidth(2)
+ax.spines['right'].set_linewidth(2)
+ax.spines['top'].set_linewidth(2)
+plt.savefig(f'./pics/Vb_ldo.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(f'./pics/Vb_ldo.png', format='png', bbox_inches='tight')
+
+plt.figure('Transistor dimensions MP')
+fig, axs = plt.subplots(3)
+axs[0].plot(average_window(W_MP_mean), 'b', label='RGCN') # RGCN
+axs[0].fill_between(np.linspace(0, num_steps, num_steps), W_MP_min, W_MP_max, alpha=0.3, color='b') 
+axs[0].xaxis.set_tick_params(labelsize='14')
+axs[0].yaxis.set_tick_params(labelsize='14')
+axs[0].set_ylabel('$\mathbf{W_{M_{P}}}$ $(\mathbf{\mu m})$', fontweight='bold', fontsize=14)
+axs[0].set_yticks(np.array([0, 25, 50, 75, 100]))
+axs[0].set_xticklabels([])
+axs[0].spines['bottom'].set_linewidth(2)
+axs[0].spines['left'].set_linewidth(2)
+axs[0].spines['right'].set_linewidth(2)
+axs[0].spines['top'].set_linewidth(2)
+axs[0].grid(linewidth=2)
+axs[1].plot(average_window(L_MP_mean), 'b', label='RGCN') # RGCN
+axs[1].fill_between(np.linspace(0, num_steps, num_steps), L_MP_min, L_MP_max, alpha=0.3, color='b') 
+axs[1].xaxis.set_tick_params(labelsize='14')
+axs[1].yaxis.set_tick_params(labelsize='14')
+axs[1].set_ylabel('$\mathbf{L_{M_{P}}}$ $(\mathbf{\mu m})$', fontweight='bold', fontsize=14)
+axs[1].set_yticks(np.array([0.5, 0.75, 1]))
+axs[1].set_xticklabels([])
+axs[1].spines['bottom'].set_linewidth(2)
+axs[1].spines['left'].set_linewidth(2)
+axs[1].spines['right'].set_linewidth(2)
+axs[1].spines['top'].set_linewidth(2)
+axs[1].grid(linewidth=2)
+axs[2].plot(average_window(M_MP_mean), 'b', label='RGCN') # RGCN
+axs[2].fill_between(np.linspace(0, num_steps, num_steps), M_MP_min, M_MP_max, alpha=0.3, color='b') 
+axs[2].xaxis.set_tick_params(labelsize='14')
+axs[2].set_yticks(np.array([0, 500, 1000, 1500, 2000]))
+axs[2].yaxis.set_tick_params(labelsize='14')
+axs[2].set_ylabel('$\mathbf{M_{M_{P}}}$', fontweight='bold', fontsize=14)
+axs[2].spines['bottom'].set_linewidth(2)
+axs[2].spines['left'].set_linewidth(2)
+axs[2].spines['right'].set_linewidth(2)
+axs[2].spines['top'].set_linewidth(2)
+axs[2].grid(linewidth=2)
+axs[2].set_xlabel('Number of Simulations', fontweight='bold', fontsize=14)
+plt.savefig(f'./pics/MP_ldo.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(f'./pics/MP_ldo.png', format='png', bbox_inches='tight')
+
+plt.figure('Rfb and Cfb')
+fig, axs = plt.subplots(2)
+axs[0].plot(average_window(Rfb_mean), 'b', label='RGCN') # RGCN
+axs[0].fill_between(np.linspace(0, num_steps, num_steps), Rfb_min, Rfb_max, alpha=0.3, color='b') 
+axs[0].xaxis.set_tick_params(labelsize='14')
+axs[0].yaxis.set_tick_params(labelsize='14')
+axs[0].set_ylabel('$\mathbf{R_{fb}}$ $(\mathbf{\Omega})$', fontweight='bold', fontsize=14)
+axs[0].set_yticks(np.array([0, 1500, 3000, 4500, 6000, 7500, 9000]))
+axs[0].spines['bottom'].set_linewidth(2)
+axs[0].spines['left'].set_linewidth(2)
+axs[0].spines['right'].set_linewidth(2)
+axs[0].spines['top'].set_linewidth(2)
+axs[0].grid(linewidth=2)
+axs[1].plot(np.array(average_window(Cfb_mean))/1e-12, 'b', label='RGCN') # RGCN
+axs[1].fill_between(np.linspace(0, num_steps, num_steps), np.array(Cfb_min)/1e-12, np.array(Cfb_max)/1e-12, alpha=0.3, color='b') 
+axs[1].xaxis.set_tick_params(labelsize='14')
+axs[1].yaxis.set_tick_params(labelsize='14')
+axs[1].set_ylabel('$\mathbf{C_{fb}}$ $(\mathbf{pf})$', fontweight='bold', fontsize=14)
+axs[1].set_yticks(np.array([0, 5, 10, 15, 20]))
+axs[1].spines['bottom'].set_linewidth(2)
+axs[1].spines['left'].set_linewidth(2)
+axs[1].spines['right'].set_linewidth(2)
+axs[1].spines['top'].set_linewidth(2)
+axs[1].grid(linewidth=2)
+axs[1].set_xlabel('Number of Simulations', fontweight='bold', fontsize=14)
+plt.savefig(f'./pics/Rfb_Cfb_ldo.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(f'./pics/Rfb_Cfb_ldo.png', format='png', bbox_inches='tight')
+
+plt.figure('CL')
+plt.plot(np.array(average_window(CL_mean))/1e-12, 'b', label='RGCN') # RGCN
+plt.fill_between(np.linspace(0, num_steps, num_steps), np.array(CL_min)/1e-12, np.array(CL_max)/1e-12, alpha=0.3, color='b') 
+plt.xlabel('Number of Simulations', fontweight='bold', fontsize=14)
+plt.xticks(fontsize=14, weight='bold')
+plt.xticks(np.arange(0, num_steps+1, 2000))
+plt.ylabel('$\mathbf{C_{L}}$ $(\mathbf{pf})$', fontweight='bold', fontsize=14)
+plt.yticks(fontsize=14, fontweight='bold')
+plt.grid(linewidth=2)
+ax = plt.gca()
+ax.spines['bottom'].set_linewidth(2)
+ax.spines['left'].set_linewidth(2)
+ax.spines['right'].set_linewidth(2)
+ax.spines['top'].set_linewidth(2)
+plt.savefig(f'./pics/CL_ldo.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(f'./pics/CL_ldo.png', format='png', bbox_inches='tight')
+
+""" Replay the best results """
+best_file = file_name1
+best_design = np.argmax(rews_buf1)
+best_action = memory1.acts_buf[best_design]
+best_reward = np.max(rews_buf1)
+LDOEnv().step(best_action) # run the simulations
+
+""" Result visualizations and save these as pictures """
+# plot average reward
 
 rgcn_mean = average_window(np.mean([rews_buf1, rews_buf2, rews_buf3], axis=0))
 rgcn_std =  np.std([rews_buf1, rews_buf2, rews_buf3], axis=0)
@@ -111,13 +639,13 @@ mlp_std =  np.std([rews_buf10, rews_buf11, rews_buf12], axis=0)
 
 plt.figure('Reward')
 plt.plot(rgcn_mean, 'b', label='RGCN') # RGCN
-plt.fill_between(np.linspace(0, num_steps, num_steps), np.min([rews_buf1, rews_buf2, rews_buf3], axis=0), np.min([rews_buf1, rews_buf2, rews_buf3], axis=0), alpha=0.3, color='b') 
+plt.fill_between(np.linspace(0, num_steps, num_steps), np.min([rews_buf1, rews_buf2, rews_buf3], axis=0), np.max([rews_buf1, rews_buf2, rews_buf3], axis=0), alpha=0.3, color='b') 
 plt.plot(gcn_mean, 'r', label='GCN') # GCN
-plt.fill_between(np.linspace(0, num_steps, num_steps), np.min([rews_buf4, rews_buf5, rews_buf6], axis=0), np.min([rews_buf4, rews_buf5, rews_buf6], axis=0), alpha=0.3, color='r') 
+plt.fill_between(np.linspace(0, num_steps, num_steps), np.min([rews_buf4, rews_buf5, rews_buf6], axis=0), np.max([rews_buf4, rews_buf5, rews_buf6], axis=0), alpha=0.3, color='r') 
 plt.plot(gat_mean, 'lime', label='GAT') # GAT
-plt.fill_between(np.linspace(0, num_steps, num_steps), np.min([rews_buf7, rews_buf8, rews_buf9], axis=0), np.min([rews_buf7, rews_buf8, rews_buf9], axis=0), alpha=0.3, color='lime') 
+plt.fill_between(np.linspace(0, num_steps, num_steps), np.min([rews_buf7, rews_buf8, rews_buf9], axis=0), np.max([rews_buf7, rews_buf8, rews_buf9], axis=0), alpha=0.3, color='lime') 
 plt.plot(mlp_mean, 'yellow', label='MLP') # MLP 
-plt.fill_between(np.linspace(0, num_steps, num_steps), np.min([rews_buf10, rews_buf11, rews_buf12], axis=0), np.min([rews_buf10, rews_buf11, rews_buf12], axis=0), alpha=0.3, color='yellow') 
+plt.fill_between(np.linspace(0, num_steps, num_steps), np.min([rews_buf10, rews_buf11, rews_buf12], axis=0), np.max([rews_buf10, rews_buf11, rews_buf12], axis=0), alpha=0.3, color='yellow') 
 plt.xlabel('Number of Simulations', fontweight='bold', fontsize=14)
 plt.xticks(fontsize=14, weight='bold')
 plt.xticks(np.arange(0, num_steps+1, 2000))

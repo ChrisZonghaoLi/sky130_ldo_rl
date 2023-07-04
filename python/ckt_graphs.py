@@ -114,13 +114,13 @@ class GraphLDO:
         self.obs_shape = (self.num_nodes, self.num_node_features)
         
         """Select an action from the input state."""
-        L_CL = 30 # each unit cap is 30um by 30um
-        W_CL = 30
+        self.L_CL = 30 # each unit cap is 30um by 30um
+        self.W_CL = 30
         M_CL_low = 10
         M_CL_high = 300 # copies of unit cap
-        self.CL_low = M_CL_low * (L_CL*W_CL*2e-15+(L_CL+W_CL)*0.38e-15)
-        self.CL_high = M_CL_high * (L_CL*W_CL*2e-15+(L_CL+W_CL)*0.38e-15)
-       
+        self.CL_low = M_CL_low * (self.L_CL * self.W_CL * 2e-15 + (self.L_CL + self.W_CL)*0.38e-15)
+        self.CL_high = M_CL_high * (self.L_CL * self.W_CL * 2e-15 + (self.L_CL + self.W_CL)*0.38e-15)
+
         self.W_Rfb = 0.35 # W: 5um
         self.L_Rfb = 3 # L: 3um
         M_Rfb_low = 1
@@ -129,12 +129,12 @@ class GraphLDO:
         self.Rfb_low =  self.Rsheet * self.L_Rfb / self.W_Rfb / M_Rfb_high  
         self.Rfb_high = self.Rsheet * self.L_Rfb / self.W_Rfb / M_Rfb_low 
         
-        W_Cfb = 10
-        L_Cfb = 10
+        self.W_Cfb = 10
+        self.L_Cfb = 10
         M_Cfb_low = 1
-        M_Cfb_high = 50
-        self.Cfb_low = M_Cfb_low * (L_Cfb*W_Cfb*2e-15+(L_Cfb+W_Cfb)*0.38e-15)
-        self.Cfb_high = M_Cfb_high * (L_Cfb*W_Cfb*2e-15+(L_Cfb+W_Cfb)*0.38e-15)
+        M_Cfb_high = 100
+        self.Cfb_low = M_Cfb_low * (self.L_Cfb * self.W_Cfb * 2e-15 + (self.L_Cfb + self.W_Cfb) *0.38e-15)
+        self.Cfb_high = M_Cfb_high * (self.L_Cfb * self.W_Cfb*2e-15 + (self.L_Cfb + self.W_Cfb)*0.38e-15)
  
         self.action_space_low = np.array([ 1, 0.5, 
                                                                      1, 0.5,
@@ -311,12 +311,12 @@ class GraphLDOFoldedCascode:
         
         """Select an action from the input state."""
 
-        L_CL = 30 # each unit cap is 30um by 30um
-        W_CL = 30
+        self.L_CL = 30 # each unit cap is 30um by 30um
+        self.W_CL = 30
         M_CL_low = 10
         M_CL_high = 300 # copies of unit cap
-        self.CL_low = M_CL_low * (L_CL*W_CL*2e-15+(L_CL+W_CL)*0.38e-15)
-        self.CL_high = M_CL_high * (L_CL*W_CL*2e-15+(L_CL+W_CL)*0.38e-15)
+        self.CL_low = M_CL_low * (self.L_CL * self.W_CL * 2e-15 + (self.L_CL + self.W_CL)*0.38e-15)
+        self.CL_high = M_CL_high * (self.L_CL * self.W_CL * 2e-15 + (self.L_CL + self.W_CL)*0.38e-15)
 
         self.W_Rfb = 0.35 # W: 5um
         self.L_Rfb = 3 # L: 3um
@@ -326,12 +326,12 @@ class GraphLDOFoldedCascode:
         self.Rfb_low =  self.Rsheet * self.L_Rfb / self.W_Rfb / M_Rfb_high  
         self.Rfb_high = self.Rsheet * self.L_Rfb / self.W_Rfb / M_Rfb_low 
         
-        W_Cfb = 10
-        L_Cfb = 10
+        self.W_Cfb = 10
+        self.L_Cfb = 10
         M_Cfb_low = 1
         M_Cfb_high = 100
-        self.Cfb_low = M_Cfb_low * (L_Cfb*W_Cfb*2e-15+(L_Cfb+W_Cfb)*0.38e-15)
-        self.Cfb_high = M_Cfb_high * (L_Cfb*W_Cfb*2e-15+(L_Cfb+W_Cfb)*0.38e-15)
+        self.Cfb_low = M_Cfb_low * (self.L_Cfb * self.W_Cfb * 2e-15 + (self.L_Cfb + self.W_Cfb) *0.38e-15)
+        self.Cfb_high = M_Cfb_high * (self.L_Cfb * self.W_Cfb*2e-15 + (self.L_Cfb + self.W_Cfb)*0.38e-15)
         
         self.action_space_low = np.array([ 1, 0.5, #M1
                                         1, 0.5, #M3
