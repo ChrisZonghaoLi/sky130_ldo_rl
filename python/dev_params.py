@@ -241,37 +241,37 @@ class DeviceParams(object):
             if dev_type == 'm' or dev_type == 'M':
                 for param in self.params_mos:
                     if subckt == '':
-                        line = f'let {param}_{symbol_name}=@{dev_name}[{param}]'
+                        raise ValueError('In this PDK, transistor is instantiated as a subckt! Subckt is missing here.')
                     else:
                         if dev_name in self.dev_names_mos:
                             line = f'let {param}_{symbol_name}=@m.{subckt}.msky130_fd_pr__{dev_name}[{param}]'
                         else:
-                            line = f'let {param}_{symbol_name}=@m.{subckt}.{dev_name}[{param}]'
+                            raise ValueError('This device is not defined in this PDK.')
                     lines.append(line)
                     write_file = write_file + f'{param}_{symbol_name} '
                 lines.append('')
             elif dev_type == 'r' or dev_type == 'R':
                 for param in self.params_r:
                     if subckt == '':
-                        line = f'let {param}_{symbol_name}=@{dev_name}[{param}]'
+                        raise ValueError('In this PDK, resistor is instantiated as a subckt! Subckt is missing here.')
                     else:               
                         if dev_name in self.dev_names_r:
                             raise ValueError('it is not straightforward to extract resistance info from this PDK, \
-                                             so for resistance just use Rsheet * L / W for approximation. Remove the resistors from the ckt_hierarchy.')
+                                             so for resistance just use Rsheet * L / W / M for approximation. Remove the resistors from the ckt_hierarchy.')
                         else:
-                            line = f'let {param}_{symbol_name}=@r.{subckt}.{dev_name}[{param}]'
+                            raise ValueError('This device is not defined in this PDK.')
                     lines.append(line)
                     write_file = write_file + f'{param}_{symbol_name} '
                 lines.append('')    
             elif dev_type == 'c' or dev_type == 'C':
                 for param in self.params_c:
                     if subckt == '':
-                        line = f'let {param}_{symbol_name}=@{dev_name}[{param}]'
+                        raise ValueError('In this PDK, capacitor is instantiated as a subckt! Subckt is missing here.')
                     else:
                         if dev_name in self.dev_names_c:
                             line = f'let {param}_{symbol_name}=@c.{subckt}.c1[{param}]'
                         else:
-                            line = f'let {param}_{symbol_name}=@c.{subckt}.{dev_name}[{param}]'
+                            raise ValueError('This device is not defined in this PDK.')
                     lines.append(line)
                     write_file = write_file + f'{param}_{symbol_name} '
                 lines.append('')    
