@@ -8,7 +8,9 @@ Created on Wed Nov  2 23:17:26 2022
 This script is used to generate block of spice commands that used to 
 access BSIM4 device internal device parameters.
 
-You can only run it once to generate the script for the dcop
+This one is for SKY130 process.
+
+You can just run it once to generate the script for the DCOP analysis.
 """
 
 from ckt_graphs import  GraphLDO, GraphLDOFoldedCascode
