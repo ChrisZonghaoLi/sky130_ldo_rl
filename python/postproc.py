@@ -682,7 +682,7 @@ ax.spines['bottom'].set_linewidth(2)
 ax.spines['left'].set_linewidth(2)
 ax.spines['right'].set_linewidth(2)
 ax.spines['top'].set_linewidth(2)
-plt.savefig(f'./pics/DC_{best_file}.eps', format='eps', bbox_inches='tight')
+plt.savefig(f'./pics/DC_{best_file}.pdf', format='pdf', bbox_inches='tight')
 plt.savefig(f'./pics/DC_{best_file}.png', format='png', bbox_inches='tight')
 
 # plot PSRR AC response
@@ -707,7 +707,7 @@ ax.spines['left'].set_linewidth(2)
 ax.spines['right'].set_linewidth(2)
 ax.spines['top'].set_linewidth(2)
 ax.set_xscale('log')
-plt.savefig(f'./pics/PSRR_{best_file}.eps', format='eps', bbox_inches='tight')
+plt.savefig(f'./pics/PSRR_{best_file}.pdf', format='pdf', bbox_inches='tight')
 plt.savefig(f'./pics/PSRR_{best_file}.png', format='png', bbox_inches='tight')
 
 # plot loop stability
@@ -756,7 +756,7 @@ axs[1].axvline(x=freq[idx_maxload], ls='--', color='r')
 axs[1].set_xscale('log')
 axs[1].set_xlabel('Frequency (Hz)', fontweight='bold', fontsize=14)
 
-plt.savefig(f'./pics/loop_stb_{best_file}.eps', format='eps', bbox_inches='tight')
+plt.savefig(f'./pics/loop_stb_{best_file}.pdf', format='pdf', bbox_inches='tight')
 plt.savefig(f'./pics/loop_stb_{best_file}.png', format='png', bbox_inches='tight')
 
 # load regulation
@@ -795,7 +795,7 @@ axs[1].grid(linewidth=2)
 axs[1].set_yticks(np.array([1.2, 1.4, 1.6, 1.8, 2.0]))
 axs[1].set_xlabel('Time ($\mathbf{\mu s}$)', fontweight='bold', fontsize=14)
 
-plt.savefig(f'./pics/load_reg_{best_file}.eps', format='eps', bbox_inches='tight')
+plt.savefig(f'./pics/load_reg_{best_file}.pdf', format='pdf', bbox_inches='tight')
 plt.savefig(f'./pics/load_reg_{best_file}.png', format='png', bbox_inches='tight')
 
 # line regulation
@@ -831,7 +831,7 @@ axs[1].spines['top'].set_linewidth(2)
 axs[1].grid(linewidth=2)
 axs[1].set_xlabel('Time ($\mathbf{\mu s}$)', fontweight='bold', fontsize=14)
 
-plt.savefig(f'./pics/line_reg_minload_{best_file}.eps', format='eps', bbox_inches='tight')
+plt.savefig(f'./pics/line_reg_minload_{best_file}.pdf', format='pdf', bbox_inches='tight')
 plt.savefig(f'./pics/line_reg_minload_{best_file}.png', format='png', bbox_inches='tight')
 
 plt.figure('Line Reg Maxload')
@@ -857,5 +857,5 @@ axs[1].spines['top'].set_linewidth(2)
 axs[1].grid(linewidth=2)
 axs[1].set_xlabel('Time ($\mathbf{\mu s}$)', fontweight='bold', fontsize=14)
 
-plt.savefig(f'./pics/line_reg_maxload_{best_file}.eps', format='eps', bbox_inches='tight')
+plt.savefig(f'./pics/line_reg_maxload_{best_file}.pdf', format='pdf', bbox_inches='tight')
 plt.savefig(f'./pics/line_reg_maxload_{best_file}.png', format='png', bbox_inches='tight')
