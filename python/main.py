@@ -105,7 +105,7 @@ if save == True:
     save_name_actor = f"Actor_{CktGraph().__class__.__name__}_{date}_noise={noise_type}_reward={best_reward:.2f}_{GNN().__class__.__name__}_rew_eng={rew_eng}.pth"
       
     model_weight_critic = agent.critic.state_dict()
-    save_name_critic = f"Critic_{CktGraph().__class__.__name__}_{date}_noise={noise_type}_reward={best_reward:2f}_{GNN().__class__.__name__}_rew_eng={rew_eng}.pth"
+    save_name_critic = f"Critic_{CktGraph().__class__.__name__}_{date}_noise={noise_type}_reward={best_reward:.2f}_{GNN().__class__.__name__}_rew_eng={rew_eng}.pth"
       
     torch.save(model_weight_actor, PWD + "/saved_weights/" + save_name_actor)
     torch.save(model_weight_critic, PWD + "/saved_weights/" + save_name_critic)
