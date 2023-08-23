@@ -271,10 +271,10 @@ class ActorCriticMLP:
     
             self.in_channels = self.num_node_features
             self.out_channels = self.action_dim
-            self.conv1 = Linear(self.in_channels, 32)
-            self.conv2 = Linear(32, 32)
-            self.conv3 = Linear(32, 16)
-            self.conv4 = Linear(16, 16)
+            self.mlp1 = Linear(self.in_channels, 32)
+            self.mlp2 = Linear(32, 32)
+            self.mlp3 = Linear(32, 16)
+            self.mlp4 = Linear(16, 16)
             self.lin1 = LazyLinear(self.out_channels)
     
         def forward(self, state):
@@ -308,10 +308,10 @@ class ActorCriticMLP:
     
             self.in_channels = self.num_node_features + self.action_dim
             self.out_channels = 1
-            self.conv1 = Linear(self.in_channels, 32)
-            self.conv2 = Linear(32, 32)
-            self.conv3 = Linear(32, 16)
-            self.conv4 = Linear(16, 16)
+            self.mlp1 = Linear(self.in_channels, 32)
+            self.mlp2 = Linear(32, 32)
+            self.mlp3 = Linear(32, 16)
+            self.mlp4 = Linear(16, 16)
             self.lin1 = LazyLinear(self.out_channels)
     
         def forward(self, state, action):
