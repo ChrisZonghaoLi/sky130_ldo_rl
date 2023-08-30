@@ -4,7 +4,7 @@
 
 ---
 
-This is the source code for the paper accepted to IEEE/ACM ICCAAD 2023. Final paper will be posted here after it is available as the proceeding.
+This is the source code for the paper accepted to IEEE/ACM ICCAAD 2023. The final accepted manuscript can be found here: https://www.zonghaoli.com/ml_analog_ic.html.
 
 ---
 
