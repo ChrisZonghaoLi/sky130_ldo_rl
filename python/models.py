@@ -271,10 +271,10 @@ class ActorCriticMLP:
     
             self.in_channels = self.num_node_features
             self.out_channels = self.action_dim
-            self.conv1 = Linear(self.in_channels, 32)
-            self.conv2 = Linear(32, 32)
-            self.conv3 = Linear(32, 16)
-            self.conv4 = Linear(16, 16)
+            self.mlp1 = Linear(self.in_channels, 32)
+            self.mlp2 = Linear(32, 32)
+            self.mlp3 = Linear(32, 16)
+            self.mlp4 = Linear(16, 16)
             self.lin1 = LazyLinear(self.out_channels)
     
         def forward(self, state):
@@ -287,10 +287,10 @@ class ActorCriticMLP:
             actions = torch.tensor(()).to(device)
             for i in range(batch_size):
                 x = state[i]
-                x = F.relu(self.conv1(x))
-                x = F.relu(self.conv2(x))
-                x = F.relu(self.conv3(x))
-                x = F.relu(self.conv4(x))
+                x = F.relu(self.mlp1(x))
+                x = F.relu(self.mlp2(x))
+                x = F.relu(self.mlp3(x))
+                x = F.relu(self.mlp4(x))
                 x = self.lin1(torch.flatten(x))
                 x = torch.tanh(x).reshape(1, -1)
                 actions = torch.cat((actions, x), axis=0)
@@ -308,10 +308,10 @@ class ActorCriticMLP:
     
             self.in_channels = self.num_node_features + self.action_dim
             self.out_channels = 1
-            self.conv1 = Linear(self.in_channels, 32)
-            self.conv2 = Linear(32, 32)
-            self.conv3 = Linear(32, 16)
-            self.conv4 = Linear(16, 16)
+            self.mlp1 = Linear(self.in_channels, 32)
+            self.mlp2 = Linear(32, 32)
+            self.mlp3 = Linear(32, 16)
+            self.mlp4 = Linear(16, 16)
             self.lin1 = LazyLinear(self.out_channels)
     
         def forward(self, state, action):
@@ -325,10 +325,10 @@ class ActorCriticMLP:
             values = torch.tensor(()).to(device)
             for i in range(batch_size):
                 x = data[i]
-                x = F.relu(self.conv1(x))
-                x = F.relu(self.conv2(x))
-                x = F.relu(self.conv3(x))
-                x = F.relu(self.conv4(x))
+                x = F.relu(self.mlp1(x))
+                x = F.relu(self.mlp2(x))
+                x = F.relu(self.mlp3(x))
+                x = F.relu(self.mlp4(x))
                 x = self.lin1(torch.flatten(x)).reshape(1, -1)
                 values = torch.cat((values, x), axis=0)
     

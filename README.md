@@ -4,18 +4,18 @@
 
 ---
 
-This is the source code for the paper submitted to IEEE/ACM ICCAAD 2023.
+This is the source code for the paper accepted to IEEE/ACM ICCAAD 2023. The final accepted manuscript can be found here: https://www.zonghaoli.com/ml_analog_ic.html.
 
 ---
 
 ## Repo Structure
 
-All files you are lookring for are placed inside the folder `/python`. 
+All files you are looking for are placed inside the folder `/python`. 
 - `ldo.py`: define the LDO1 environment (Gymnasium compatible).
 - `ldo_folded_cascode.py`: define the LDO2 environment (Gymnasium compatible).
 - `ckt_graphs.py`: define the graph info as well as specifications for LDO1 and LDO2.
-- `dev_params.py`: used to extrac device parameters such as threshold voltage and transconductance of transistors, providing the observations for RL.
-- `ddpg.py`: where DDPG algorithm is stored.
+- `dev_params.py`: used to extract device parameters such as threshold voltage and transconductance of transistors, providing the observations for RL.
+- `ddpg.py`: where the DDPG algorithm is stored.
 - `models.py`: where various GNN models are stored.
 - `main.py`: run the optimization for LDO1.
 - `main2.py`: run the optimization for LDO2.
@@ -25,4 +25,7 @@ All files you are lookring for are placed inside the folder `/python`.
 - `/simulations`: store the SPICE files and it is where Ngspice is running.
 - `ldo_rgcn_rl.ipynb`: a notebook summaries the work, it is outdated.
 
-
+---
+## Getting Started
+You may just follow the tutorial in `ldo_rgcn_rl.ipynb`, which is outdated but the flow is the same.
+If you want to have the update-to-date version running, simply execute `main.py` for LDO1 and `main2.py`for LDO2. 
