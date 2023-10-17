@@ -7,10 +7,14 @@ from ckt_graphs import GraphLDOFoldedCascode
 from ldo_folded_cascode import LDOFoldedCascodeEnv
 
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 plt.style.use(style='default')
 plt.rcParams['lines.linewidth'] = 2
 plt.rcParams["font.weight"] = "bold"
 plt.rcParams["axes.labelweight"] = "bold"
+plt.rcParams["axes.axisbelow"] = True
+plt.rc('axes', axisbelow=True)
+
 
 from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
 from mpl_toolkits.axes_grid1.inset_locator import mark_inset
@@ -39,6 +43,10 @@ file_name9 = 'memory_GraphLDOFoldedCascode_2023-04-22_noise=uniform_reward=-0.33
 file_name10 = 'memory_GraphLDOFoldedCascode_2023-04-25_noise=uniform_reward=-0.15_ActorCriticMLP'
 file_name11 = 'memory_GraphLDOFoldedCascode_2023-04-26_noise=uniform_reward=-0.95_ActorCriticMLP'
 file_name12 = 'memory_GraphLDOFoldedCascode_2023-04-27_noise=uniform_reward=-1.82_ActorCriticMLP'
+# Random
+file_name13 = 'memory_GraphLDOFoldedCascode_2023-09-15_noise=uniform_reward=-1.62_random_rew_eng=True'
+file_name14 = 'memory_GraphLDOFoldedCascode_2023-09-16_noise=uniform_reward=-0.89_random_rew_eng=True'
+file_name15 = 'memory_GraphLDOFoldedCascode_2023-09-18_noise=uniform_reward=-1.57_random_rew_eng=True'
 
 num_steps = 20000
 
@@ -66,6 +74,12 @@ with open(f'./saved_memories/{file_name11}.pkl', 'rb') as memory_file:
     memory11 = pickle.load(memory_file)
 with open(f'./saved_memories/{file_name12}.pkl', 'rb') as memory_file:
     memory12 = pickle.load(memory_file)
+with open(f'./saved_memories/{file_name13}.pkl', 'rb') as memory_file:
+    memory13 = pickle.load(memory_file)
+with open(f'./saved_memories/{file_name14}.pkl', 'rb') as memory_file:
+    memory14 = pickle.load(memory_file)
+with open(f'./saved_memories/{file_name15}.pkl', 'rb') as memory_file:
+    memory15 = pickle.load(memory_file)
     
 rews_buf1 = memory1.rews_buf[:num_steps]
 rews_buf2 = memory2.rews_buf[:num_steps]
@@ -79,6 +93,9 @@ rews_buf9 = memory9.rews_buf[:num_steps]
 rews_buf10 = memory10.rews_buf[:num_steps]
 rews_buf11 = memory11.rews_buf[:num_steps]
 rews_buf12 = memory12.rews_buf[:num_steps]
+rews_buf13 = memory13.rews_buf[:num_steps]
+rews_buf14 = memory14.rews_buf[:num_steps]
+rews_buf15 = memory15.rews_buf[:num_steps]
 
 """ Result visualizations and save these as pictures """
 # plot average reward
@@ -269,7 +286,105 @@ axs[2].set_xlabel('Number of Simulations', fontweight='bold', fontsize=14)
 plt.savefig(f'./pics/PSRR_minload_ldo_folded_cascode.pdf', format='pdf', bbox_inches='tight')
 plt.savefig(f'./pics/PSRR_minload_ldo_folded_cascode.png', format='png', bbox_inches='tight')
 
-""" Show the best results in each trial """
+# Radar chart
+from radar_chart import *
+
+def ldo_performance(points=101, endpoint=-1):
+    # Noted we are taking PSRR^-1
+
+    data_minload = np.array([PSRR_leq_10kHz_minload_mean*-1, 
+                             PSRR_leq_1MHz_minload_mean*-1, 
+                             PSRR_geq_1MHz_minload_mean*-1, 
+                             PM_minload_mean]
+                            )
+    _sampler = np.linspace(0, num_steps-1, points).astype('int64') # ensure it is integer
+
+    data_minload = data_minload[:, _sampler]
+
+    data_maxload = np.array([PSRR_leq_10kHz_maxload_mean*-1, 
+                            PSRR_leq_1MHz_maxload_mean*-1, 
+                            PSRR_geq_1MHz_maxload_mean*-1, 
+                            PM_maxload_mean]
+                            )
+
+    data_maxload = data_maxload[:, _sampler]
+
+    data = [
+        ['$\mathbf{PSRR^{-1}_{\leq10kHz}}$ (dB)', '$\mathbf{PSRR^{-1}_{\leq1MHz}}$ (dB)', '$\mathbf{PSRR^{-1}_{\geq1MHz}}$ (dB)', 'PM (degree)'],
+        ('minload', 
+            data_minload.T.tolist()),
+        ('maxload', 
+            data_maxload.T.tolist())
+    ]
+    
+    return data, _sampler
+
+N = 4
+theta = radar_factory(N, frame='polygon')
+
+data, sampler = ldo_performance()
+spoke_labels = data.pop(0) # the first label got removed...
+
+fig, axs = plt.subplots(figsize=(9, 9), nrows=1, ncols=2,
+                        subplot_kw=dict(projection='radar'))
+
+
+fig.subplots_adjust(wspace=1.2, hspace=0.20, top=0.85, bottom=0.05, right=0.87)
+
+def update(i):
+
+    # There are two subplots, one for min load, one for max load
+   
+    # clear the previous plot
+    axs[0].clear()
+    axs[1].clear()
+   
+    axs[0].set_rlabel_position(0)
+    axs[1].set_rlabel_position(0)
+    axs[0].set_rgrids([15, 30, 45, 60], visible=True, fontsize='small')
+    axs[0].set_ylim(0,75) # clamp the axis so that it does not move with iterations
+    axs[1].set_rgrids([15, 30, 45, 60], visible=True, fontsize='small')
+    axs[1].set_ylim(0,75)
+
+    # put variable labels
+    axs[0].set_varlabels(spoke_labels)
+    axs[1].set_varlabels(spoke_labels)
+
+    # put subtitles
+    axs[0].set_title('At $\mathbf{I_{L,min}=10\,\mu A}$' + f' | #step {sampler[i]+1}', weight='bold', size='medium', position=(0.5, 1.1),
+                  horizontalalignment='center', verticalalignment='center')
+    axs[1].set_title('At $\mathbf{I_{L,max}=10\,mA}$' + f' | #step {sampler[i]+1}', weight='bold', size='medium', position=(0.5, 1.1),
+                  horizontalalignment='center', verticalalignment='center')
+    
+    # plot target spec
+    spec = [30, 20, 5, 60]
+    axs[0].fill(theta, spec, facecolor='g', alpha=0.4, label='Specs')
+    axs[1].fill(theta, spec, facecolor='g', alpha=0.4, label='Specs')
+    # for ti, di in zip(theta, spec):
+    #     axs[0].text(ti, di+3, int(di), color='green', ha='center', va='center')
+    #     axs[1].text(ti, di+3, int(di), color='green', ha='center', va='center')
+    
+    # plot new data
+    axs[0].fill(theta, data[0][1][i], facecolor='b', alpha=0.3, label=f'Results')
+    axs[1].fill(theta, data[1][1][i], facecolor='r', alpha=0.3, label=f'Results')
+    
+    # Adding numbers to the tip of the plot
+    # https://stackoverflow.com/questions/59905300/how-do-i-add-labels-to-my-radar-chart-points-in-python-matplotlib
+    for ti, di in zip(theta, data[0][1][i]):
+        axs[0].text(ti, di+3, int(di), color='dodgerblue', ha='center', va='center')
+        
+    for ti, di in zip(theta, data[1][1][i]):
+        axs[1].text(ti, di+3, int(di), color='lightcoral', ha='center', va='center')
+    
+    axs[0].legend(   loc=(0.9, .95),labelspacing=0.1, fontsize='small')
+    axs[1].legend(   loc=(0.9, .95),labelspacing=0.1, fontsize='small')
+
+ani = animation.FuncAnimation(fig, update, frames=len(data[0][1]), interval=500)
+ani.save('./pics/specs_ldo_folded_cascode.gif', writer='imagemagick', fps=10)
+
+
+
+""" Show the best actions in each trial """
 best_design1 = np.argmax(rews_buf1)
 best_design2 = np.argmax(rews_buf2)
 best_design3 = np.argmax(rews_buf3)
@@ -726,7 +841,7 @@ plt.fill_between(np.linspace(0, num_steps, num_steps), np.array(CL_min)/1e-12, n
 plt.xlabel('Number of Simulations', fontweight='bold', fontsize=14)
 plt.xticks(fontsize=14, weight='bold')
 plt.xticks(np.arange(0, num_steps+1, 5000))
-plt.ylabel('$\mathbf{C_{L}}$ $(\mathbf{pf})$', fontweight='bold', fontsize=14)
+plt.ylabel('$\mathbf{C_{L}}$ $(\mathbf{pF})$', fontweight='bold', fontsize=14)
 plt.yticks(fontsize=14, fontweight='bold')
 plt.grid(linewidth=2)
 ax = plt.gca()
@@ -752,6 +867,8 @@ gat_mean = average_window(np.mean([rews_buf7, rews_buf8, rews_buf9], axis=0))
 gat_std =  np.std([rews_buf7, rews_buf8, rews_buf9], axis=0)
 mlp_mean = average_window(np.mean([rews_buf10, rews_buf11, rews_buf12], axis=0))
 mlp_std =  np.std([rews_buf10, rews_buf11, rews_buf12], axis=0)
+random_mean = average_window(np.mean([rews_buf13, rews_buf14, rews_buf15], axis=0))
+random_std =  np.std([rews_buf13, rews_buf14, rews_buf15], axis=0)
 
 plt.figure('Reward')
 plt.plot(rgcn_mean, 'b', label='RGCN') # RGCN
@@ -762,6 +879,8 @@ plt.plot(gat_mean, 'lime', label='GAT') # GAT
 plt.fill_between(np.linspace(0, num_steps, num_steps), np.min([rews_buf7, rews_buf8, rews_buf9], axis=0), np.max([rews_buf7, rews_buf8, rews_buf9], axis=0), alpha=0.3, color='lime') 
 plt.plot(mlp_mean, 'yellow', label='MLP') # MLP 
 plt.fill_between(np.linspace(0, num_steps, num_steps), np.min([rews_buf10, rews_buf11, rews_buf12], axis=0), np.max([rews_buf10, rews_buf11, rews_buf12], axis=0), alpha=0.3, color='yellow') 
+plt.plot(random_mean, 'grey', label='Random') # MLP 
+plt.fill_between(np.linspace(0, num_steps, num_steps), np.min([rews_buf13, rews_buf14, rews_buf15], axis=0), np.max([rews_buf13, rews_buf14, rews_buf15], axis=0), alpha=0.2, color='grey') 
 plt.xlabel('Number of Simulations', fontweight='bold', fontsize=14)
 plt.xticks(fontsize=14, weight='bold')
 plt.xticks(np.arange(0, num_steps+1, 5000))
@@ -774,8 +893,57 @@ ax.spines['bottom'].set_linewidth(2)
 ax.spines['left'].set_linewidth(2)
 ax.spines['right'].set_linewidth(2)
 ax.spines['top'].set_linewidth(2)
+axins = zoomed_inset_axes(ax, 3, loc=7) # zoom = 10
+axins.plot(rgcn_mean, color='b')
+axins.plot(gcn_mean, color='r')
+axins.plot(gat_mean, color='lime')
+axins.plot(mlp_mean, color='yellow')
+axins.plot(random_mean, color='grey')
+axins.set_xlim(19500, 20000) # Limit the region for zoom
+axins.set_ylim(-1.8, -0.3)
+axins.set_xticks([])
+mark_inset(ax, axins, loc1=1, loc2=2, fc="none", ec="0.5")
 plt.savefig(f'./pics/reward_ldo_folded_cascode.pdf', format='pdf', bbox_inches='tight')
 plt.savefig(f'./pics/reward_ldo_folded_cascode.png', format='png', bbox_inches='tight')
+
+# plot how the best result evolve with simulation run
+# 50 is the average window size
+rgcn_best = np.array([np.max(np.max([rews_buf1, rews_buf2, rews_buf3], axis=0)[:i+1]) for i in range(len(rgcn_mean))])
+gcn_best = np.array([np.max(np.max([rews_buf4, rews_buf5, rews_buf6], axis=0)[:i+1]) for i in range(len(gcn_mean))])
+gat_best = np.array([np.max(np.max([rews_buf7, rews_buf8, rews_buf9], axis=0)[:i+1]) for i in range(len(gat_mean))])
+mlp_best = np.array([np.max(np.max([rews_buf10, rews_buf11, rews_buf12], axis=0)[:i+1]) for i in range(len(mlp_mean))])
+
+plt.figure('Reward Improvement')
+plt.plot(rgcn_best, 'b', label='RGCN') # RGCN
+plt.plot(gcn_best, 'r', label='GCN') # GCN
+plt.plot(gat_best, 'lime', label='GAT') # GAT
+plt.plot(mlp_best, 'yellow', label='MLP') # MLP 
+plt.xlabel('Number of Simulations', fontweight='bold', fontsize=14)
+plt.xticks(fontsize=14, weight='bold')
+plt.xticks(np.array([4000,10000,15000,20000]))
+plt.ylabel('Reward', fontweight='bold', fontsize=14)
+plt.xlim(4000,20000)
+plt.ylim(-2.5,0)
+plt.yticks(fontsize=14, fontweight='bold')
+plt.legend(loc='lower right')
+plt.grid(linewidth=2)
+ax = plt.gca()
+ax.spines['bottom'].set_linewidth(2)
+ax.spines['left'].set_linewidth(2)
+ax.spines['right'].set_linewidth(2)
+ax.spines['top'].set_linewidth(2)
+axins = zoomed_inset_axes(ax, 5, loc=7) # zoom = 10
+axins.plot(rgcn_best, color='b')
+axins.plot(gcn_best, color='r')
+axins.plot(gat_best, color='lime')
+axins.plot(mlp_best, color='yellow')
+axins.set_xlim(19700, 20000) # Limit the region for zoom
+axins.set_ylim(-0.3, -0.1)
+axins.set_xticks([])
+mark_inset(ax, axins, loc1=1, loc2=2, fc="none", ec="0.5")
+plt.savefig(f'./pics/reward_best_ldo_folded_cascode.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(f'./pics/reward_best_ldo_folded_cascode.png', format='png', bbox_inches='tight')
+
 
 ''' plot how LDO specs improve w.r.t. simulations '''
 _file_name = 'memory_GraphLDOFoldedCascode_2023-04-30_noise=uniform_reward=-0.27_ActorCriticRGCN'
@@ -799,6 +967,7 @@ plt.xticks(fontsize=14, weight='bold')
 plt.ylabel('$\mathbf{V_{reg}\,(V)}$', fontweight='bold', fontsize=14)
 plt.yticks(fontsize=14, fontweight='bold')
 plt.grid(linewidth=2)
+plt.xticks(np.array([1, 1.5, 2, 2.5, 3, 3.3]))
 plt.yticks(np.array([0, 0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2]))
 ax = plt.gca()
 ax.spines['bottom'].set_linewidth(2)

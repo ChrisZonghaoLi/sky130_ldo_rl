@@ -152,7 +152,10 @@ class LDOEnv(gym.Env, CktGraph, DeviceParams):
 
         reward = self.reward
         
-        terminated = False
+        if reward >= 0:
+            terminated = True
+        else:
+            terminated = False
             
         print(tabulate(
             [
@@ -495,7 +498,7 @@ class LDOEnv(gym.Env, CktGraph, DeviceParams):
             }
 
 
-    def _init_random_sim(self, max_sims=100):
+    def _init_random_sim(self, max_sims=100, write=True):
         '''
         
         This is NOT the same as the random step in the agent, here is basically 
@@ -600,6 +603,8 @@ class LDOEnv(gym.Env, CktGraph, DeviceParams):
             'OP_M_std': OP_M_std_dict
             }
 
-        with open(f'{SPICE_NETLIST_DIR}/ldo_tb_op_mean_std.json','w') as file:
-            json.dump(self.OP_M_mean_std, file)
+        if write == True:
+            with open(f'{SPICE_NETLIST_DIR}/ldo_tb_op_mean_std.json','w') as file:
+                json.dump(self.OP_M_mean_std, file)
 
+        return OP_M_lists

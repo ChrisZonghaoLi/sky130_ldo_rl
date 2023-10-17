@@ -165,7 +165,10 @@ class LDOFoldedCascodeEnv(gym.Env, CktGraph, DeviceParams):
 
         reward = self.reward
         
-        terminated = False
+        if reward >= 0:
+            terminated = True
+        else:
+            terminated = False
             
         print(tabulate(
             [
