@@ -1,0 +1,17 @@
+.param W_M1=43.41674578934908 L_M1=1.9628574848175049
+.param W_M2=W_M1 L_M2=L_M1
+.param W_M3=94.05397203564644 L_M3=0.863776832818985
+.param W_M4=W_M3 L_M4=L_M3
+.param W_M5=36.13440836966038 L_M5=1.5286887809634209
+.param Vcm=1.2 Vb=1.11 
+.param Vdd=2
+
+* cascode diff pair
+*.param W_M1=100 L_M1=0.5
+*.param W_M2=W_M1 L_M2=L_M1
+*.param W_M3=50 L_M3=0.5
+*.param W_M4=W_M3 L_M4=L_M3
+*.param W_M5=50 L_M5=0.5
+*.param W_M6=W_M5 L_M6=L_M5
+*.param W_M7=100 L_M7=2
+*.param Vcm=0.55 Vb=1

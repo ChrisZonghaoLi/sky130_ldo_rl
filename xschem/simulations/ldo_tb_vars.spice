@@ -1,0 +1,13 @@
+.param W_M1=13 L_M1=2
+.param W_M2=W_M1 L_M2=L_M1
+.param W_M3=80 L_M3=0.5
+.param W_M4=W_M3 L_M4=L_M3
+.param W_M5=14.27 L_M5=1.22
+.param W_pass=63.65 L_pass=0.5 M_pass=142 Nf_pass=1
+.param Vb=1.37
+.param M_Rfb=1 M_Cfb=4
+.param M_CL=262
+.param Vdd=2
+.param Vref=1.2
+.param IL=10m
+

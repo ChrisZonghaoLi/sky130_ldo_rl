@@ -1,0 +1,96 @@
+** sch_path: /fs1/eecg/tcc/lizongh2/sky130_ldo/xschem/folded_cascode_tb.sch
+**.subckt folded_cascode_tb Vout
+*.opin Vout
+x2 net2 net4 Vin net1 Vout net3 GND diff_pair_folded_cascode
+Vin Vin GND ac 1 dc 1.8
+.save i(vin)
+Vb net1 GND dc 1.8
+.save i(vb)
+Vdd2 net2 GND dc 2
+.save i(vdd2)
+Vb2 net4 GND Vb2
+.save i(vb2)
+Vb1 net3 GND Vb1
+.save i(vb1)
+C1 Vout GND 20p m=1
+**** begin user architecture code
+
+.param mc_mm_switch=0
+.param mc_pr_switch=0
+.include /usr/local/share/pdk/sky130A/libs.tech/ngspice/corners/tt.spice
+.include /usr/local/share/pdk/sky130A/libs.tech/ngspice/r+c/res_typical__cap_typical.spice
+.include /usr/local/share/pdk/sky130A/libs.tech/ngspice/r+c/res_typical__cap_typical__lin.spice
+.include /usr/local/share/pdk/sky130A/libs.tech/ngspice/corners/tt/specialized_cells.spice
+
+
+.include /autofs/fs1.ece/fs1.eecg.tcc/lizongh2/sky130_ldo/xschem/simulations/ldo_folded_cascode_tb_vars.spice
+
+
+
+
+
+.control
+* high precision simulation
+*.OPTIONS maxord=1
+.OPTIONS itl1=200
+.OPTIONS itl2=200
+.OPTIONS itl4=200
+
+* save all voltage and current
+save all
+.options savecurrents
+set filetype=ascii
+set units=degrees
+
+* AC
+ac dec 10 1 10G
+plot vdb(Vout) vp(Vout)
+
+* DC sweep
+dc Vin 0 3 0.01
+plot v(Vin) v(Vout)
+
+.endc
+
+
+**** end user architecture code
+**.ends
+
+* expanding   symbol:  diff_pair_folded_cascode.sym # of pins=7
+** sym_path: /fs1/eecg/tcc/lizongh2/sky130_ldo/xschem/diff_pair_folded_cascode.sym
+** sch_path: /fs1/eecg/tcc/lizongh2/sky130_ldo/xschem/diff_pair_folded_cascode.sch
+.subckt diff_pair_folded_cascode Vdd Vb2 vinp vinm vout Vb1 Vss
+*.iopin Vdd
+*.ipin vinm
+*.ipin vinp
+*.iopin Vb1
+*.iopin Vss
+*.iopin Vb2
+*.opin vout
+XM1 net2 vinp net4 Vss sky130_fd_pr__nfet_g5v0d10v5 L=L_M1 W=W_M1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+XM2 net3 vinm net4 Vss sky130_fd_pr__nfet_g5v0d10v5 L=L_M2 W=W_M2 nf=1 ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+XM4 net3 net1 Vdd Vdd sky130_fd_pr__pfet_g5v0d10v5 L=L_M4 W=W_M4 nf=1 ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+XM3 net2 net1 Vdd Vdd sky130_fd_pr__pfet_g5v0d10v5 L=L_M3 W=W_M3 nf=1 ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+XM9 net4 Vb1 Vss Vss sky130_fd_pr__nfet_g5v0d10v5 L=L_M9 W=W_M9 nf=1 ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+XM6 vout Vb2 net3 Vdd sky130_fd_pr__pfet_g5v0d10v5 L=L_M6 W=W_M6 nf=1 ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+XM5 net1 Vb2 net2 Vdd sky130_fd_pr__pfet_g5v0d10v5 L=L_M5 W=W_M5 nf=1 ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+IL net1 Vss dc 100u
+IL1 vout Vss dc 100u
+.ends
+
+.GLOBAL GND
+.end

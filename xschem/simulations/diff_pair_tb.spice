@@ -1,0 +1,72 @@
+** sch_path: /fs1/eecg/tcc/lizongh2/sky130_ldo/xschem/diff_pair_tb.sch
+**.subckt diff_pair_tb vout
+*.opin vout
+V1 net1 GND dc Vcm ac 1
+.save i(v1)
+V2 VDD GND Vdd
+.save i(v2)
+V3 net2 GND Vb
+.save i(v3)
+C1 vout GND 100p m=1
+V4 net3 GND dc Vcm
+.save i(v4)
+x1 VDD vout net1 net3 net2 GND diff_pair
+**** begin user architecture code
+
+.lib /usr/local/share/pdk/sky130A/libs.tech/ngspice/sky130.lib.spice tt
+
+
+.include /autofs/fs1.ece/fs1.eecg.tcc/lizongh2/sky130_ldo/xschem/simulations/diff_pair_tb_vars.spice
+
+
+
+
+.control
+save all
+set filetype=ascii
+set units=degrees
+
+dc V1 0 3 0.01
+plot v(vout)
+
+ac dec 10 1 1e10
+plot mag(v(vout))
+plot vdb(vout)
+plot ph(v(vout))
+
+.endc
+
+
+**** end user architecture code
+**.ends
+
+* expanding   symbol:  diff_pair.sym # of pins=6
+** sym_path: /fs1/eecg/tcc/lizongh2/sky130_ldo/xschem/diff_pair.sym
+** sch_path: /fs1/eecg/tcc/lizongh2/sky130_ldo/xschem/diff_pair.sch
+.subckt diff_pair Vdd vout vinp vinm Vb Vss
+*.iopin Vdd
+*.ipin vinm
+*.ipin vinp
+*.iopin Vb
+*.opin vout
+*.iopin Vss
+XM1 net1 vinp net2 Vss sky130_fd_pr__nfet_g5v0d10v5 L=L_M1 W=W_M1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+XM2 vout vinm net2 Vss sky130_fd_pr__nfet_g5v0d10v5 L=L_M2 W=W_M2 nf=1 ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+XM3 vout net1 Vdd Vdd sky130_fd_pr__pfet_g5v0d10v5 L=L_M3 W=W_M3 nf=1 ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+XM4 net1 net1 Vdd Vdd sky130_fd_pr__pfet_g5v0d10v5 L=L_M4 W=W_M4 nf=1 ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+XM5 net2 Vb Vss Vss sky130_fd_pr__nfet_g5v0d10v5 L=L_M5 W=W_M5 nf=1 ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+.ends
+
+.GLOBAL GND
+.GLOBAL VDD
+.end

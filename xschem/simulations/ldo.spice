@@ -1,0 +1,44 @@
+** sch_path: /fs1/eecg/tcc/lizongh2/sky130_ldo/xschem/ldo.sch
+**.subckt ldo Vb Vss Vreg Vref Vdd Vfb
+*.iopin Vb
+*.iopin Vss
+*.opin Vreg
+*.iopin Vref
+*.ipin Vdd
+*.iopin Vfb
+x1 Vdd net1 Vfb Vref Vb Vss diff_pair
+XM6 Vreg net1 Vdd Vdd sky130_fd_pr__pfet_g5v0d10v5 L=L_pass W=W_pass nf=Nf_pass ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=M_pass m=M_pass
+XCfb net2 Vreg sky130_fd_pr__cap_mim_m3_1 W=10 L=10 MF=M_Cfb m=M_Cfb
+XRfb net2 net1 Vss sky130_fd_pr__res_high_po_0p35 L=3 mult=M_Rfb m=M_Rfb
+**.ends
+
+* expanding   symbol:  diff_pair.sym # of pins=6
+** sym_path: /fs1/eecg/tcc/lizongh2/sky130_ldo/xschem/diff_pair.sym
+** sch_path: /fs1/eecg/tcc/lizongh2/sky130_ldo/xschem/diff_pair.sch
+.subckt diff_pair Vdd vout vinp vinm Vb Vss
+*.iopin Vdd
+*.ipin vinm
+*.ipin vinp
+*.iopin Vb
+*.opin vout
+*.iopin Vss
+XM1 net1 vinp net2 Vss sky130_fd_pr__nfet_g5v0d10v5 L=L_M1 W=W_M1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+XM2 vout vinm net2 Vss sky130_fd_pr__nfet_g5v0d10v5 L=L_M2 W=W_M2 nf=1 ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+XM3 vout net1 Vdd Vdd sky130_fd_pr__pfet_g5v0d10v5 L=L_M3 W=W_M3 nf=1 ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+XM4 net1 net1 Vdd Vdd sky130_fd_pr__pfet_g5v0d10v5 L=L_M4 W=W_M4 nf=1 ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+XM5 net2 Vb Vss Vss sky130_fd_pr__nfet_g5v0d10v5 L=L_M5 W=W_M5 nf=1 ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+.ends
+
+.end

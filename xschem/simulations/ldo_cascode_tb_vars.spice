@@ -1,0 +1,16 @@
+.param W_M1=100 L_M1=2
+.param W_M2=W_M1 L_M2=L_M1
+.param W_M3=50 L_M3=0.5
+.param W_M4=W_M3 L_M4=L_M3
+.param W_M5=50 L_M5=0.5
+.param W_M6=W_M5 L_M6=L_M5
+.param W_M7=100 L_M7=2
+.param W_pass=30 L_pass=0.5 M_pass=1000
+.param Vbn=1.0055942396176183
+.param Rfb=1000 Cfb=1p
+.param f_Vdd=10k
+.param Vdd=2
+.param Vref=1.8 Vamp=0.1*Vdd
+.param IL=10m
+.param M_CL=100
+

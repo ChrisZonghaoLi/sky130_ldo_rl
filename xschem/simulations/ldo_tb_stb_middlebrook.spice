@@ -1,0 +1,167 @@
+** sch_path: /fs1/eecg/tcc/lizongh2/sky130_ldo/xschem/ldo_tb_stb_middlebrook.sch
+**.subckt ldo_tb_stb_middlebrook Vreg
+*.opin Vreg
+Vref Vref GND Vref
+.save i(vref)
+Vb net1 GND Vb
+.save i(vb)
+IL Vreg GND IL
+Vdd Vdd GND Vdd
+.save i(vdd)
+x1 Vdd net2 Vref net1 GND Vreg ldo
+XCL Vreg GND sky130_fd_pr__cap_mim_m3_1 W=30 L=30 MF=M_CL m=M_CL
+Vprobe2 probe net2 dc 0
+.save i(vprobe2)
+Vprobe1 probe Vreg dc 0 ac 1
+.save i(vprobe1)
+Iprobe1 GND probe dc 0 ac 0
+**** begin user architecture code
+
+.lib /usr/local/share/pdk/sky130A/libs.tech/ngspice/sky130.lib.spice tt
+
+
+
+
+.nodeset v(Vreg)=1.8
+.nodeset v(net2)=1.8
+
+.control
+save all
+set filetype=ascii
+set units=degrees
+
+* Stability_Analysis using Middlebrook and Tian's method
+* http://education.ingenazure.com/ac-stability-analysis-ngspice/
+* at min load
+alter IL dc=10u
+let runs=2
+let run=0
+
+alter @Vprobe1[acmag]=1
+alter @Iprobe1[acmag]=0
+
+dowhile run<runs
+set run=$&run
+set temp=27
+
+ac dec 10 1 10G
+
+alter @Vprobe1[acmag]=0
+alter @Iprobe1[acmag]=1
+
+let run=run+1
+end
+
+let ip11 = ac1.i(Vprobe1)
+let ip12 = ac1.i(Vprobe2)
+let ip21 = ac2.i(Vprobe1)
+let ip22 = ac2.i(Vprobe2)
+let vprb1 = ac1.v(probe)
+let vprb2 = ac2.v(probe)
+
+*** Middlebrook
+let mb = 1/(vprb1+ip22)-1
+*** Tian that is preferred
+let av = 1/(1/(2*(ip11*vprb2-vprb1*ip21)+vprb1+ip21)-1)
+
+plot vdb(mb) vp(mb)
+plot vdb(av) vp(av)
+
+wrdata ldo_tb_loop_gain_minload mag(av) vp(av)
+
+* at max load
+reset all
+alter IL dc=10m
+let runs=2
+let run=0
+
+alter @Vprobe1[acmag]=1
+alter @Iprobe1[acmag]=0
+
+dowhile run<runs
+set run=$&run
+set temp=27
+
+ac dec 10 1 10G
+
+alter @Vprobe1[acmag]=0
+alter @Iprobe1[acmag]=1
+
+let run=run+1
+end
+
+let ip11 = ac3.i(Vprobe1)
+let ip12 = ac3.i(Vprobe2)
+let ip21 = ac4.i(Vprobe1)
+let ip22 = ac4.i(Vprobe2)
+let vprb1 = ac3.v(probe)
+let vprb2 = ac4.v(probe)
+
+*** Middlebrook
+let mb = 1/(vprb1+ip22)-1
+*** Tian that is preferred
+let av = 1/(1/(2*(ip11*vprb2-vprb1*ip21)+vprb1+ip21)-1)
+
+plot vdb(mb) vp(mb)
+plot vdb(av) vp(av)
+
+wrdata ldo_tb_loop_gain_maxload mag(av) vp(av)
+
+.endc
+
+
+
+.include /autofs/fs1.ece/fs1.eecg.tcc/lizongh2/sky130_ldo/xschem/simulations/ldo_tb_vars.spice
+
+
+**** end user architecture code
+**.ends
+
+* expanding   symbol:  ldo.sym # of pins=6
+** sym_path: /fs1/eecg/tcc/lizongh2/sky130_ldo/xschem/ldo.sym
+** sch_path: /fs1/eecg/tcc/lizongh2/sky130_ldo/xschem/ldo.sch
+.subckt ldo Vdd Vfb Vref Vb Vss Vreg
+*.iopin Vb
+*.iopin Vss
+*.opin Vreg
+*.iopin Vref
+*.ipin Vdd
+*.iopin Vfb
+x1 Vdd net1 Vfb Vref Vb Vss diff_pair
+XM6 Vreg net1 Vdd Vdd sky130_fd_pr__pfet_g5v0d10v5 L=L_pass W=W_pass nf=1 ad='int((nf+1)/2) * W/nf *
++ 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf
++ + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=M_pass m=M_pass
+Rfb net1 net2 Rfb m=1
+Cfb net2 Vreg Cfb m=1
+.ends
+
+
+* expanding   symbol:  diff_pair.sym # of pins=6
+** sym_path: /fs1/eecg/tcc/lizongh2/sky130_ldo/xschem/diff_pair.sym
+** sch_path: /fs1/eecg/tcc/lizongh2/sky130_ldo/xschem/diff_pair.sch
+.subckt diff_pair Vdd vout vinp vinm Vb Vss
+*.iopin Vdd
+*.ipin vinm
+*.ipin vinp
+*.iopin Vb
+*.opin vout
+*.iopin Vss
+XM1 net1 vinp net2 Vss sky130_fd_pr__nfet_g5v0d10v5 L=L_M1 W=W_M1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2)
++ * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 /
++ W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+XM2 vout vinm net2 Vss sky130_fd_pr__nfet_g5v0d10v5 L=L_M2 W=W_M2 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2)
++ * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 /
++ W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+XM3 vout net1 Vdd Vdd sky130_fd_pr__pfet_g5v0d10v5 L=L_M3 W=W_M3 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2)
++ * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 /
++ W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+XM4 net1 net1 Vdd Vdd sky130_fd_pr__pfet_g5v0d10v5 L=L_M4 W=W_M4 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2)
++ * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 /
++ W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+XM5 net2 Vb Vss Vss sky130_fd_pr__nfet_g5v0d10v5 L=L_M5 W=W_M5 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2)
++ * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 /
++ W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+.ends
+
+.GLOBAL GND
+.end

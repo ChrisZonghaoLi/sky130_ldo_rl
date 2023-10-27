@@ -1,0 +1,8 @@
+.param W_M1=1 L_M1=0.18
+.param W_M2=W_M1 L_M2=L_M1
+.param W_M3=1 L_M3=0.18
+.param W_M4=W_M3 L_M4=L_M3
+.param W_M5=1 L_M5=0.18
+.param W_pass=10 L_pass=0.18
+.param Vcm=1.6 Vb=0.7
+

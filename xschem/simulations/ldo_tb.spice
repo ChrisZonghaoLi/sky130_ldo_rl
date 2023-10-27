@@ -1,0 +1,524 @@
+** sch_path: /fs1/eecg/tcc/lizongh2/sky130_ldo/xschem/ldo_tb.sch
+**.subckt ldo_tb Vreg Vreg1
+*.opin Vreg
+*.opin Vreg1
+Vref Vref GND Vref
+.save i(vref)
+Vb net1 GND Vb
+.save i(vb)
+IL Vreg net2 dc IL PULSE(10u IL 0 10n 10n 50u 100u 0)
+Vdd Vdd GND ac 1 dc Vdd
+.save i(vdd)
+x1 Vdd Vreg Vref net1 GND Vreg ldo
+XCL Vreg GND sky130_fd_pr__cap_mim_m3_1 W=30 L=30 MF=M_CL m=M_CL
+Rdummy net2 GND 1 m=1
+Vref1 Vref1 GND Vref
+.save i(vref1)
+Vb1 net3 GND Vb
+.save i(vb1)
+IL1 Vreg1 GND IL
+Vdd1 Vdd1 GND Vdd
+.save i(vdd1)
+x2 Vdd1 net4 Vref1 net3 GND Vreg1 ldo
+XCL1 Vreg1 GND sky130_fd_pr__cap_mim_m3_1 W=30 L=30 MF=M_CL m=M_CL
+Vprobe2 probe net4 dc 0
+.save i(vprobe2)
+Vprobe1 probe Vreg1 dc 0 ac 1
+.save i(vprobe1)
+Iprobe1 GND probe dc 0 ac 0
+**** begin user architecture code
+
+
+*.OPTIONS maxord=1
+.OPTIONS itl1=200
+.OPTIONS itl2=200
+.OPTIONS itl4=200
+
+.control
+* save all voltage and current
+save all
+.options savecurrents
+set filetype=ascii
+set units=degrees
+
+* Loop stability
+alter IL1 dc=10u
+let runs=2
+let run=0
+
+alter @Vprobe1[acmag]=1
+alter @Iprobe1[acmag]=0
+
+dowhile run<runs
+set run=$&run
+set temp=27
+
+ac dec 10 1 10G
+
+alter @Vprobe1[acmag]=0
+alter @Iprobe1[acmag]=1
+
+let run=run+1
+end
+
+let ip11 = ac1.i(Vprobe1)
+let ip12 = ac1.i(Vprobe2)
+let ip21 = ac2.i(Vprobe1)
+let ip22 = ac2.i(Vprobe2)
+let vprb1 = ac1.v(probe)
+let vprb2 = ac2.v(probe)
+
+*** Middlebrook
+let mb = 1/(vprb1+ip22)-1
+*** Tian that is preferred
+let av = 1/(1/(2*(ip11*vprb2-vprb1*ip21)+vprb1+ip21)-1)
+
+plot vdb(mb) vp(mb)
+plot vdb(av) vp(av)
+
+wrdata ldo_tb_loop_gain_minload mag(av) vp(av)
+
+* at max load
+reset all
+alter IL1 dc=10m
+let runs=2
+let run=0
+
+alter @Vprobe1[acmag]=1
+alter @Iprobe1[acmag]=0
+
+dowhile run<runs
+set run=$&run
+set temp=27
+
+ac dec 10 1 10G
+
+alter @Vprobe1[acmag]=0
+alter @Iprobe1[acmag]=1
+
+let run=run+1
+end
+
+let ip11 = ac3.i(Vprobe1)
+let ip12 = ac3.i(Vprobe2)
+let ip21 = ac4.i(Vprobe1)
+let ip22 = ac4.i(Vprobe2)
+let vprb1 = ac3.v(probe)
+let vprb2 = ac4.v(probe)
+
+*** Middlebrook
+let mb = 1/(vprb1+ip22)-1
+*** Tian that is preferred
+let av = 1/(1/(2*(ip11*vprb2-vprb1*ip21)+vprb1+ip21)-1)
+
+plot vdb(mb) vp(mb)
+plot vdb(av) vp(av)
+
+wrdata ldo_tb_loop_gain_maxload mag(av) vp(av)
+
+* DC sweep
+dc Vdd 1 3 0.01
+plot v(Vdd) v(Vreg)
+wrdata ldo_tb_dc v(Vreg)
+
+* Transient analysis with load regulation
+* do not miss the space between the square bracket and number
+tran 10n 100u
+plot @Rdummy[i]
+plot Vreg
+wrdata ldo_tb_load_reg Vreg
+
+* Transient analysis with line regulation
+* at minimum load current 10uA
+alter @IL[PULSE] [ 10u 10u 0 10n 10n 100u 100u 0 ]
+alter @Vdd[PULSE] [ 2 3 0 1u 1u 25u 50u 0 ]
+tran 10n 100u
+plot Vdd
+plot @Rdummy[i]
+plot Vreg
+wrdata ldo_tb_line_reg_minload Vreg
+
+* at maximum load current 10mA
+alter @IL[PULSE] [ 10m 10m 0 10n 10n 100u 100u 0 ]
+tran 10n 100u
+plot @Rdummy[i]
+plot Vreg
+wrdata ldo_tb_line_reg_maxload Vreg
+
+* PSRR with max load
+alter Vdd ac=1
+alter Vprobe1 ac=0
+ac dec 10 1 10G
+plot vdb(Vreg)
+wrdata ldo_tb_psrr_maxload mag(Vreg) vp(Vreg)
+
+* PSRR with min load
+alter IL dc=10u
+ac dec 10 1 10G
+plot vdb(Vreg)
+wrdata ldo_tb_psrr_minload mag(Vreg) vp(Vreg)
+
+* OP
+op
+let gmbs_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[gmbs]
+let gm_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[gm]
+let gds_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[gds]
+let vdsat_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[vdsat]
+let vth_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[vth]
+let id_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[id]
+let ibd_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[ibd]
+let ibs_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[ibs]
+let gbd_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[gbd]
+let gbs_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[gbs]
+let isub_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[isub]
+let igidl_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[igidl]
+let igisl_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[igisl]
+let igs_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[igs]
+let igd_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[igd]
+let igb_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[igb]
+let igcs_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[igcs]
+let vbs_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[vbs]
+let vgs_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[vgs]
+let vds_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[vds]
+let cgg_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[cgg]
+let cgs_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[cgs]
+let cgd_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[cgd]
+let cbg_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[cbg]
+let cbd_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[cbd]
+let cbs_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[cbs]
+let cdg_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[cdg]
+let cdd_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[cdd]
+let cds_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[cds]
+let csg_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[csg]
+let csd_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[csd]
+let css_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[css]
+let cgb_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[cgb]
+let cdb_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[cdb]
+let csb_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[csb]
+let cbb_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[cbb]
+let capbd_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[capbd]
+let capbs_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[capbs]
+let qg_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[qg]
+let qb_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[qb]
+let qs_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[qs]
+let qinv_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[qinv]
+let qdef_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[qdef]
+let gcrg_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[gcrg]
+let gtau_M1=@m.x1.x1.XM1.msky130_fd_pr__nfet_g5v0d10v5[gtau]
+
+let gmbs_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[gmbs]
+let gm_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[gm]
+let gds_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[gds]
+let vdsat_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[vdsat]
+let vth_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[vth]
+let id_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[id]
+let ibd_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[ibd]
+let ibs_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[ibs]
+let gbd_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[gbd]
+let gbs_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[gbs]
+let isub_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[isub]
+let igidl_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[igidl]
+let igisl_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[igisl]
+let igs_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[igs]
+let igd_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[igd]
+let igb_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[igb]
+let igcs_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[igcs]
+let vbs_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[vbs]
+let vgs_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[vgs]
+let vds_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[vds]
+let cgg_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[cgg]
+let cgs_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[cgs]
+let cgd_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[cgd]
+let cbg_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[cbg]
+let cbd_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[cbd]
+let cbs_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[cbs]
+let cdg_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[cdg]
+let cdd_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[cdd]
+let cds_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[cds]
+let csg_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[csg]
+let csd_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[csd]
+let css_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[css]
+let cgb_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[cgb]
+let cdb_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[cdb]
+let csb_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[csb]
+let cbb_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[cbb]
+let capbd_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[capbd]
+let capbs_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[capbs]
+let qg_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[qg]
+let qb_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[qb]
+let qs_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[qs]
+let qinv_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[qinv]
+let qdef_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[qdef]
+let gcrg_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[gcrg]
+let gtau_M2=@m.x1.x1.XM2.msky130_fd_pr__nfet_g5v0d10v5[gtau]
+
+let gmbs_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[gmbs]
+let gm_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[gm]
+let gds_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[gds]
+let vdsat_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[vdsat]
+let vth_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[vth]
+let id_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[id]
+let ibd_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[ibd]
+let ibs_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[ibs]
+let gbd_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[gbd]
+let gbs_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[gbs]
+let isub_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[isub]
+let igidl_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[igidl]
+let igisl_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[igisl]
+let igs_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[igs]
+let igd_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[igd]
+let igb_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[igb]
+let igcs_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[igcs]
+let vbs_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[vbs]
+let vgs_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[vgs]
+let vds_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[vds]
+let cgg_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[cgg]
+let cgs_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[cgs]
+let cgd_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[cgd]
+let cbg_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[cbg]
+let cbd_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[cbd]
+let cbs_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[cbs]
+let cdg_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[cdg]
+let cdd_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[cdd]
+let cds_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[cds]
+let csg_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[csg]
+let csd_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[csd]
+let css_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[css]
+let cgb_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[cgb]
+let cdb_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[cdb]
+let csb_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[csb]
+let cbb_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[cbb]
+let capbd_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[capbd]
+let capbs_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[capbs]
+let qg_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[qg]
+let qb_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[qb]
+let qs_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[qs]
+let qinv_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[qinv]
+let qdef_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[qdef]
+let gcrg_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[gcrg]
+let gtau_M3=@m.x1.x1.XM3.msky130_fd_pr__pfet_g5v0d10v5[gtau]
+
+let gmbs_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[gmbs]
+let gm_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[gm]
+let gds_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[gds]
+let vdsat_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[vdsat]
+let vth_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[vth]
+let id_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[id]
+let ibd_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[ibd]
+let ibs_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[ibs]
+let gbd_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[gbd]
+let gbs_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[gbs]
+let isub_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[isub]
+let igidl_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[igidl]
+let igisl_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[igisl]
+let igs_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[igs]
+let igd_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[igd]
+let igb_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[igb]
+let igcs_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[igcs]
+let vbs_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[vbs]
+let vgs_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[vgs]
+let vds_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[vds]
+let cgg_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[cgg]
+let cgs_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[cgs]
+let cgd_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[cgd]
+let cbg_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[cbg]
+let cbd_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[cbd]
+let cbs_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[cbs]
+let cdg_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[cdg]
+let cdd_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[cdd]
+let cds_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[cds]
+let csg_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[csg]
+let csd_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[csd]
+let css_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[css]
+let cgb_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[cgb]
+let cdb_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[cdb]
+let csb_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[csb]
+let cbb_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[cbb]
+let capbd_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[capbd]
+let capbs_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[capbs]
+let qg_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[qg]
+let qb_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[qb]
+let qs_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[qs]
+let qinv_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[qinv]
+let qdef_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[qdef]
+let gcrg_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[gcrg]
+let gtau_M4=@m.x1.x1.XM4.msky130_fd_pr__pfet_g5v0d10v5[gtau]
+
+let gmbs_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[gmbs]
+let gm_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[gm]
+let gds_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[gds]
+let vdsat_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[vdsat]
+let vth_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[vth]
+let id_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[id]
+let ibd_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[ibd]
+let ibs_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[ibs]
+let gbd_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[gbd]
+let gbs_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[gbs]
+let isub_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[isub]
+let igidl_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[igidl]
+let igisl_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[igisl]
+let igs_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[igs]
+let igd_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[igd]
+let igb_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[igb]
+let igcs_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[igcs]
+let vbs_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[vbs]
+let vgs_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[vgs]
+let vds_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[vds]
+let cgg_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[cgg]
+let cgs_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[cgs]
+let cgd_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[cgd]
+let cbg_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[cbg]
+let cbd_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[cbd]
+let cbs_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[cbs]
+let cdg_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[cdg]
+let cdd_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[cdd]
+let cds_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[cds]
+let csg_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[csg]
+let csd_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[csd]
+let css_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[css]
+let cgb_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[cgb]
+let cdb_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[cdb]
+let csb_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[csb]
+let cbb_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[cbb]
+let capbd_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[capbd]
+let capbs_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[capbs]
+let qg_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[qg]
+let qb_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[qb]
+let qs_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[qs]
+let qinv_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[qinv]
+let qdef_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[qdef]
+let gcrg_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[gcrg]
+let gtau_M5=@m.x1.x1.XM5.msky130_fd_pr__nfet_g5v0d10v5[gtau]
+
+let gmbs_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[gmbs]
+let gm_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[gm]
+let gds_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[gds]
+let vdsat_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[vdsat]
+let vth_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[vth]
+let id_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[id]
+let ibd_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[ibd]
+let ibs_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[ibs]
+let gbd_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[gbd]
+let gbs_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[gbs]
+let isub_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[isub]
+let igidl_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[igidl]
+let igisl_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[igisl]
+let igs_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[igs]
+let igd_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[igd]
+let igb_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[igb]
+let igcs_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[igcs]
+let vbs_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[vbs]
+let vgs_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[vgs]
+let vds_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[vds]
+let cgg_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[cgg]
+let cgs_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[cgs]
+let cgd_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[cgd]
+let cbg_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[cbg]
+let cbd_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[cbd]
+let cbs_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[cbs]
+let cdg_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[cdg]
+let cdd_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[cdd]
+let cds_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[cds]
+let csg_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[csg]
+let csd_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[csd]
+let css_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[css]
+let cgb_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[cgb]
+let cdb_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[cdb]
+let csb_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[csb]
+let cbb_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[cbb]
+let capbd_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[capbd]
+let capbs_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[capbs]
+let qg_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[qg]
+let qb_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[qb]
+let qs_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[qs]
+let qinv_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[qinv]
+let qdef_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[qdef]
+let gcrg_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[gcrg]
+let gtau_M6=@m.x1.XM6.msky130_fd_pr__pfet_g5v0d10v5[gtau]
+
+write ldo_tb_op gmbs_M1 gm_M1 gds_M1 vdsat_M1 vth_M1 id_M1 ibd_M1 ibs_M1 gbd_M1 gbs_M1 isub_M1
++ igidl_M1 igisl_M1 igs_M1 igd_M1 igb_M1 igcs_M1 vbs_M1 vgs_M1 vds_M1 cgg_M1 cgs_M1 cgd_M1 cbg_M1 cbd_M1
++ cbs_M1 cdg_M1 cdd_M1 cds_M1 csg_M1 csd_M1 css_M1 cgb_M1 cdb_M1 csb_M1 cbb_M1 capbd_M1 capbs_M1 qg_M1 qb_M1
++ qs_M1 qinv_M1 qdef_M1 gcrg_M1 gtau_M1 gmbs_M2 gm_M2 gds_M2 vdsat_M2 vth_M2 id_M2 ibd_M2 ibs_M2 gbd_M2
++ gbs_M2 isub_M2 igidl_M2 igisl_M2 igs_M2 igd_M2 igb_M2 igcs_M2 vbs_M2 vgs_M2 vds_M2 cgg_M2 cgs_M2 cgd_M2
++ cbg_M2 cbd_M2 cbs_M2 cdg_M2 cdd_M2 cds_M2 csg_M2 csd_M2 css_M2 cgb_M2 cdb_M2 csb_M2 cbb_M2 capbd_M2
++ capbs_M2 qg_M2 qb_M2 qs_M2 qinv_M2 qdef_M2 gcrg_M2 gtau_M2 gmbs_M3 gm_M3 gds_M3 vdsat_M3 vth_M3 id_M3 ibd_M3
++ ibs_M3 gbd_M3 gbs_M3 isub_M3 igidl_M3 igisl_M3 igs_M3 igd_M3 igb_M3 igcs_M3 vbs_M3 vgs_M3 vds_M3 cgg_M3
++ cgs_M3 cgd_M3 cbg_M3 cbd_M3 cbs_M3 cdg_M3 cdd_M3 cds_M3 csg_M3 csd_M3 css_M3 cgb_M3 cdb_M3 csb_M3 cbb_M3
++ capbd_M3 capbs_M3 qg_M3 qb_M3 qs_M3 qinv_M3 qdef_M3 gcrg_M3 gtau_M3 gmbs_M4 gm_M4 gds_M4 vdsat_M4 vth_M4
++ id_M4 ibd_M4 ibs_M4 gbd_M4 gbs_M4 isub_M4 igidl_M4 igisl_M4 igs_M4 igd_M4 igb_M4 igcs_M4 vbs_M4 vgs_M4
++ vds_M4 cgg_M4 cgs_M4 cgd_M4 cbg_M4 cbd_M4 cbs_M4 cdg_M4 cdd_M4 cds_M4 csg_M4 csd_M4 css_M4 cgb_M4 cdb_M4
++ csb_M4 cbb_M4 capbd_M4 capbs_M4 qg_M4 qb_M4 qs_M4 qinv_M4 qdef_M4 gcrg_M4 gtau_M4 gmbs_M5 gm_M5 gds_M5
++ vdsat_M5 vth_M5 id_M5 ibd_M5 ibs_M5 gbd_M5 gbs_M5 isub_M5 igidl_M5 igisl_M5 igs_M5 igd_M5 igb_M5 igcs_M5
++ vbs_M5 vgs_M5 vds_M5 cgg_M5 cgs_M5 cgd_M5 cbg_M5 cbd_M5 cbs_M5 cdg_M5 cdd_M5 cds_M5 csg_M5 csd_M5 css_M5
++ cgb_M5 cdb_M5 csb_M5 cbb_M5 capbd_M5 capbs_M5 qg_M5 qb_M5 qs_M5 qinv_M5 qdef_M5 gcrg_M5 gtau_M5 gmbs_M6
++ gm_M6 gds_M6 vdsat_M6 vth_M6 id_M6 ibd_M6 ibs_M6 gbd_M6 gbs_M6 isub_M6 igidl_M6 igisl_M6 igs_M6 igd_M6
++ igb_M6 igcs_M6 vbs_M6 vgs_M6 vds_M6 cgg_M6 cgs_M6 cgd_M6 cbg_M6 cbd_M6 cbs_M6 cdg_M6 cdd_M6 cds_M6 csg_M6
++ csd_M6 css_M6 cgb_M6 cdb_M6 csb_M6 cbb_M6 capbd_M6 capbs_M6 qg_M6 qb_M6 qs_M6 qinv_M6 qdef_M6 gcrg_M6
++ gtau_M6
+.endc
+
+
+
+.include /autofs/fs1.ece/fs1.eecg.tcc/lizongh2/sky130_ldo/xschem/simulations/ldo_tb_vars.spice
+
+
+
+.param mc_mm_switch=0
+.param mc_pr_switch=0
+.include /usr/local/share/pdk/sky130A/libs.tech/ngspice/corners/tt.spice
+.include /usr/local/share/pdk/sky130A/libs.tech/ngspice/r+c/res_typical__cap_typical.spice
+.include /usr/local/share/pdk/sky130A/libs.tech/ngspice/r+c/res_typical__cap_typical__lin.spice
+.include /usr/local/share/pdk/sky130A/libs.tech/ngspice/corners/tt/specialized_cells.spice
+
+**** end user architecture code
+**.ends
+
+* expanding   symbol:  ldo.sym # of pins=6
+** sym_path: /fs1/eecg/tcc/lizongh2/sky130_ldo/xschem/ldo.sym
+** sch_path: /fs1/eecg/tcc/lizongh2/sky130_ldo/xschem/ldo.sch
+.subckt ldo Vdd Vfb Vref Vb Vss Vreg
+*.iopin Vb
+*.iopin Vss
+*.opin Vreg
+*.iopin Vref
+*.ipin Vdd
+*.iopin Vfb
+x1 Vdd net1 Vfb Vref Vb Vss diff_pair
+XM6 Vreg net1 Vdd Vdd sky130_fd_pr__pfet_g5v0d10v5 L=L_pass W=W_pass nf=Nf_pass ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=M_pass m=M_pass
+XCfb net2 Vreg sky130_fd_pr__cap_mim_m3_1 W=10 L=10 MF=M_Cfb m=M_Cfb
+XRfb net2 net1 Vss sky130_fd_pr__res_high_po_0p35 L=3 mult=M_Rfb m=M_Rfb
+.ends
+
+
+* expanding   symbol:  diff_pair.sym # of pins=6
+** sym_path: /fs1/eecg/tcc/lizongh2/sky130_ldo/xschem/diff_pair.sym
+** sch_path: /fs1/eecg/tcc/lizongh2/sky130_ldo/xschem/diff_pair.sch
+.subckt diff_pair Vdd vout vinp vinm Vb Vss
+*.iopin Vdd
+*.ipin vinm
+*.ipin vinp
+*.iopin Vb
+*.opin vout
+*.iopin Vss
+XM1 net1 vinp net2 Vss sky130_fd_pr__nfet_g5v0d10v5 L=L_M1 W=W_M1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+XM2 vout vinm net2 Vss sky130_fd_pr__nfet_g5v0d10v5 L=L_M2 W=W_M2 nf=1 ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+XM3 vout net1 Vdd Vdd sky130_fd_pr__pfet_g5v0d10v5 L=L_M3 W=W_M3 nf=1 ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+XM4 net1 net1 Vdd Vdd sky130_fd_pr__pfet_g5v0d10v5 L=L_M4 W=W_M4 nf=1 ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+XM5 net2 Vb Vss Vss sky130_fd_pr__nfet_g5v0d10v5 L=L_M5 W=W_M5 nf=1 ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1 m=1
+.ends
+
+.GLOBAL GND
+.end

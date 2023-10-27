@@ -1,0 +1,29 @@
+** sch_path: /usr/local/share/pdk/sky130A/libs.tech/xschem/sky130_tests/test_mim_cap.sch
+**.subckt test_mim_cap
+I1 0 G pwl 0 0 1000n 0 1010n 100n
+R1 G REF 1G m=1
+I3 0 G2 pwl 0 0 1000n 0 1010n 100n
+R3 G2 REF 1G m=1
+C1 G2 0 0.205p m=2
+V1 REF 0 -2
+.save i(v1)
+XC2 G 0 sky130_fd_pr__cap_mim_m3_2 W=10 L=10 MF=2 m=2
+**** begin user architecture code
+
+
+.control
+save all
+tran 10n 6u
+plot g g2
+write test_mim_cap.raw
+.endc
+
+
+
+** opencircuitdesign pdks install
+.lib /usr/local/share/pdk/sky130A/libs.tech/ngspice/sky130.lib.spice tt
+
+
+**** end user architecture code
+**.ends
+.end

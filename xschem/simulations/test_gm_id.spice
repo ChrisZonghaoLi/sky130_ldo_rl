@@ -1,0 +1,73 @@
+** sch_path: /fs1/eecg/tcc/lizongh2/sky130_ldo/xschem/test_gm_id.sch
+**.subckt test_gm_id
+VDD net2 GND VD
+.save i(vdd)
+VGS net1 GND VG
+.save i(vgs)
+XM1 net2 net1 GND GND sky130_fd_pr__nfet_01v8_lvt L=L_sweep W=W_sweep nf=1 ad='int((nf+1)/2) * W/nf * 0.29'
++ as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)'
++ nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=M_sweep m=M_sweep
+**** begin user architecture code
+
+.param mc_mm_switch=0
+.param mc_pr_switch=0
+.include /usr/local/share/pdk/sky130A/libs.tech/ngspice/corners/tt.spice
+.include /usr/local/share/pdk/sky130A/libs.tech/ngspice/r+c/res_typical__cap_typical.spice
+.include /usr/local/share/pdk/sky130A/libs.tech/ngspice/r+c/res_typical__cap_typical__lin.spice
+.include /usr/local/share/pdk/sky130A/libs.tech/ngspice/corners/tt/specialized_cells.spice
+
+
+
+
+* some initial params
+.param W_sweep=10
+.param L_sweep=0.18
+.param ID=10u
+.param VD=1.8
+.param VG=1
+.param M_sweep=1
+
+* high precision simulation
+.options savecurrents
+.OPTIONS maxord=1
+.OPTIONS itl1=200
+.OPTIONS itl2=200
+.OPTIONS itl4=200
+
+.control
+* save all voltage and current
+save all
+set filetype=ascii
+set units=degrees
+
+* save transistor gm
+save @m.xm1.msky130_fd_pr__nfet_01v8_lvt[gm]
+save @m.xm1.msky130_fd_pr__nfet_01v8_lvt[gds]
+save @m.xm1.msky130_fd_pr__nfet_01v8_lvt[id]
+let gm=@m.xm1.msky130_fd_pr__nfet_01v8_lvt[gm]
+let gds=@m.xm1.msky130_fd_pr__nfet_01v8_lvt[gds]
+let id=@m.xm1.msky130_fd_pr__nfet_01v8_lvt[id]
+
+* parameteric sweep
+dc VGS 0 2 0.2
+plot gm
+alterparam L_sweep=0.36
+reset
+dc VGS 0 2 0.2
+plot gm
+alterparam L_sweep=0.5
+reset
+dc VGS 0 2 0.2
+plot gm
+alterparam L_sweep=1
+reset
+dc VGS 0 2 0.2
+plot gm
+
+.endc
+
+
+**** end user architecture code
+**.ends
+.GLOBAL GND
+.end
