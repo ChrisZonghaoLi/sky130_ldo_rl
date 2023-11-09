@@ -12,7 +12,7 @@ plt.style.use(style='default')
 plt.rcParams['lines.linewidth'] = 2
 plt.rcParams["font.weight"] = "bold"
 plt.rcParams["axes.labelweight"] = "bold"
-plt.rcParams["axes.axisbelow"] = True
+plt.rcParams["axes.axisbelow"] = False
 plt.rc('axes', axisbelow=True)
 
 
